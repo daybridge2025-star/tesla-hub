@@ -736,7 +736,7 @@ export default function App() {
   const [news, setNews]         = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsFilter, setNewsFilter]   = useState("전체");
-  const [newsDay, setNewsDay]         = useState(0);
+  const [newsDay, setNewsDay]         = useState(-1); // -1 = 전체 기간 (0은 "오늘"의 실제 newsDates 인덱스라 센티널로 못 씀)
   const [newsDates, setNewsDates]     = useState([]);
   const [breakingNews, setBreakingNews] = useState([]);
   const [newsMeta, setNewsMeta] = useState({ updatedAt: null, total: 0, error: null });
@@ -1116,7 +1116,7 @@ const NewsTab = () => {
 
   const filteredNews = news.filter(n => {
     const catOk  = newsFilter === "전체" || n.category === newsFilter;
-    const dateOk = newsDay === 0 || n.date === newsDates[newsDay];
+    const dateOk = newsDay === -1 || n.date === newsDates[newsDay];
     return catOk && dateOk;
   });
 
@@ -1211,7 +1211,7 @@ const NewsTab = () => {
       {/* 날짜 필터 — 기사가 1건도 없는 날짜(예: 옛날 초기 테스트 잔재)는 목록에서 제외 */}
       <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:14,paddingBottom:2}}>
         {["전체 기간", ...newsDates.filter(d => news.some(n => n.date === d)).slice(0,7)].map((d,i) => {
-          const dIdx = i===0 ? 0 : newsDates.indexOf(d);
+          const dIdx = i===0 ? -1 : newsDates.indexOf(d);
           return (
             <button key={i} onClick={()=>setNewsDay(dIdx)}
               style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:newsDay===dIdx?700:400,
@@ -1252,7 +1252,7 @@ const NewsTab = () => {
       )}
 
       {/* 뉴스 카드 목록 — 특정 날짜 선택: 더보기 페이지네이션만 / 전체 기간: 날짜별 그룹 접기 + 그룹별 더보기 */}
-      {newsDay !== 0 ? (
+      {newsDay !== -1 ? (
         <>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {filteredNews.slice(0, flatVisibleCount).map(renderCard)}
@@ -1294,7 +1294,7 @@ const NewsTab = () => {
       {!newsLoading && (
         <div style={{textAlign:"center",padding:"16px 0",fontFamily:"'Pretendard',sans-serif",
           fontSize:11,color:"var(--text-3)"}}>
-          {newsDay===0 ? `전체 ${totalCount}건` : `${newsDates[newsDay]} ${filteredNews.length}건`}
+          {newsDay===-1 ? `전체 ${totalCount}건` : `${newsDates[newsDay]} ${filteredNews.length}건`}
           {" · 최근 30일 누적 · 매일 오전 9시·오후 4시 KST 업데이트"}
           {newsMeta.updatedAt && (
             <div style={{fontSize:10,color:"var(--text-3)",marginTop:4,opacity:.7,fontFamily:"'JetBrains Mono',monospace"}}>
