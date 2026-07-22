@@ -14,28 +14,27 @@ import {
 const LS = {
   get: async (key) => {
     if (typeof window !== "undefined" && window.storage) {
-      const r = await LS.get(key);
-      return r;
+      return window.storage.get(key).catch(() => null);
     }
     const v = localStorage.getItem(key);
     return v ? { value: v } : null;
   },
   getShared: async (key) => {
     if (typeof window !== "undefined" && window.storage) {
-      return LS.getShared(key);
+      return window.storage.get(key, true).catch(() => null);
     }
     const v = localStorage.getItem("shared_"+key);
     return v ? { value: v } : null;
   },
   set: async (key, value) => {
     if (typeof window !== "undefined" && window.storage) {
-      return LS.set(key, value).catch(() => null);
+      return window.storage.set(key, value).catch(() => null);
     }
     localStorage.setItem(key, value); return true;
   },
   setShared: async (key, value) => {
     if (typeof window !== "undefined" && window.storage) {
-      return LS.set(key, value, true).catch(() => null);
+      return window.storage.set(key, value, true).catch(() => null);
     }
     localStorage.setItem("shared_"+key, value); return true;
   },
@@ -46,6 +45,105 @@ const LS = {
     localStorage.removeItem(key); return true;
   },
 };
+
+/* ═══════════════════════════════════════
+   RESPONSIVE HOOK
+═══════════════════════════════════════ */
+/* ── 카운트다운 — 독립 컴포넌트 (App 리렌더 격리) ── */
+function Countdown() {
+  const [ct, setCt] = useState({d:0,h:0,m:0,s:0,passed:false});
+  const isMobile = useIsMobile();
+  useEffect(() => {
+    const target = new Date(Date.UTC(2026, 6, 22, 20, 30, 0));
+    const tick = () => {
+      const diff = (target - new Date()) / 1000;
+      if (diff <= 0) { setCt({d:0,h:0,m:0,s:0,passed:true}); return; }
+      setCt({
+        d: Math.floor(diff / 86400),
+        h: Math.floor((diff % 86400) / 3600),
+        m: Math.floor((diff % 3600) / 60),
+        s: Math.floor(diff % 60),
+        passed: false
+      });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:14,padding:"16px 18px",marginBottom:24}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.08em",textTransform:"uppercase"}}>
+          {ct.passed ? "🔔 Q2'26 실적 발표됨" : "Q2'26 실적 발표까지"}
+        </div>
+        {!ct.passed && (
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:"#38BDF8",animation:"pulse 2s ease-in-out infinite"}} />
+            <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"#38BDF8",fontWeight:600}}>LIVE</span>
+          </div>
+        )}
+      </div>
+      {!ct.passed ? (
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+          {[["일",ct.d],["시간",ct.h],["분",ct.m],["초",ct.s]].map(([label,val])=>(
+            <div key={label} style={{textAlign:"center",background:"var(--bg-elev)",borderRadius:10,padding:"10px 6px"}}>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:isMobile?20:24,fontWeight:700,color:"var(--text-1)",lineHeight:1}}>
+                {String(val).padStart(2,"0")}
+              </div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)",marginTop:5,textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:13,color:"var(--text-2)"}}>{"최신 결과를 확인하세요."}</div>
+      )}
+      <div style={{display:"flex",flexWrap:"wrap",gap:isMobile?8:16,marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.08em"}}>현지</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:"var(--text-1)"}}>7/22 16:30 ET</span>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)"}}>(장마감 후)</span>
+        </div>
+        <div style={{width:1,height:16,background:"var(--border)",alignSelf:"center"}} />
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.08em"}}>한국</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:"#38BDF8"}}>7/23 05:30 KST</span>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)"}}>{"(익일 새벽)"}</span>
+        </div>
+      </div>
+      <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"var(--text-3)",marginTop:8}}>
+        {"컨센 EPS $0.45 · 매출 $24.34B"}
+      </div>
+    </div>
+  );
+}
+
+function useIsMobile(breakpoint = 430) {
+  const [mob, setMob] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= breakpoint : false
+  );
+  useEffect(() => {
+    const h = () => setMob(window.innerWidth <= breakpoint);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, [breakpoint]);
+  return mob;
+}
+
+/* ═══════════════════════════════════════
+   FONT INJECT — Pretendard
+═══════════════════════════════════════ */
+if (typeof document !== "undefined" && !document.getElementById("pretendard-font")) {
+  const link = document.createElement("link");
+  link.id = "pretendard-font";
+  link.rel = "stylesheet";
+  link.href = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css";
+  document.head.appendChild(link);
+  const jb = document.createElement("link");
+  jb.rel = "stylesheet";
+  jb.href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&display=swap";
+  document.head.appendChild(link);
+}
 
 /* ═══════════════════════════════════════
    AUTH
@@ -63,23 +161,30 @@ async function sha256(str) {
    AI ENGINE
 ═══════════════════════════════════════ */
 async function callClaude(system, user) {
-  const apiUrl = (typeof window !== "undefined" && window.__PROXY_URL__)
-    ? window.__PROXY_URL__
-    : "https://api.anthropic.com/v1/messages";
+  const apiUrl = "https://tesla-proxy.daybridge2025.workers.dev";
   const res = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514", max_tokens: 1000,
+      model: "claude-sonnet-4-6", max_tokens: 1000,
       system, messages: [{ role: "user", content: user }],
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
     }),
   });
   if (!res.ok) throw new Error("API " + res.status);
   const data = await res.json();
-  const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
-  const m = text.replace(/```json|```/g, "").match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-  if (!m) throw new Error("JSON not found");
+  // API 오류 응답 처리
+  if (data.error) throw new Error("API Error: " + (data.error.message || JSON.stringify(data.error)));
+  if (!data.content) throw new Error("No content in response: " + JSON.stringify(Object.keys(data)));
+  // web_search 결과 포함 시 여러 content 블록 처리
+  const textBlocks = data.content.filter(b => b.type === "text");
+  if (!textBlocks.length) {
+    const types = data.content.map(b => b.type).join(", ");
+    throw new Error("No text block. Got: " + types);
+  }
+  const text = textBlocks.map(b => b.text).join("");
+  const cleaned = text.replace(/```json\n?|```/g, "").trim();
+  const m = cleaned.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+  if (!m) throw new Error("JSON not found in: " + cleaned.slice(0, 200));
   return JSON.parse(m[0]);
 }
 
@@ -207,11 +312,11 @@ const BASE_CALLS = [
 ];
 
 const BASE_POSTS = [
-  {id:1,date:"2026-06-05",cat:"DOGE·정치",likes:"2.1M",reposts:"512K",impact:"high",
+  {id:1,date:"2025-06-05",cat:"DOGE·정치",likes:"2.1M",reposts:"512K",impact:"high",
    en:"Time to drop the really big bomb: @realDonaldTrump is in the Epstein files. That is the real reason they have not been made public.",
    ko:"진짜 큰 폭탄을 투하할 시간: 트럼프는 엡스타인 파일에 있습니다. 그것이 공개되지 않는 진짜 이유입니다.",
-   ctx:"트럼프와의 공개 갈등. 이후 삭제. 당일 Tesla 주가 최대 -14.3% 급락. JPMorgan 업그레이드 당일"},
-  {id:2,date:"2026-06-05",cat:"DOGE·정치",likes:"890K",reposts:"198K",impact:"high",
+   ctx:"트럼프와의 공개 갈등. 이후 삭제. 당일 Tesla 주가 -14.3% 급락(종가 $284.68). $150B 시총 증발. 머스크 6/11 사과"},
+  {id:2,date:"2025-06-05",cat:"DOGE·정치",likes:"890K",reposts:"198K",impact:"high",
    en:"Without me, Trump would have lost the election, Dems would control the House.",
    ko:"나 없이는 트럼프가 선거에서 졌을 것이고, 민주당이 하원을 장악했을 것입니다.",
    ctx:"트럼프-머스크 갈등 당일. Trump 정부 계약 취소 검토 반발. 이후 머스크 사과"},
@@ -275,44 +380,128 @@ const BASE_POSTS = [
    en:"Tesla stock price is too high imo",
    ko:"제 생각에 테슬라 주가는 너무 높습니다",
    ctx:"COVID 봉쇄 비판 후 — 주가 10% 급락"},
+  {id:18,date:"2025-11-10",cat:"Tesla전략",likes:"312K",reposts:"98K",impact:"high",
+   en:"My companies are, surprisingly in some ways, trending towards convergence.",
+   ko:"저의 회사들이 놀랍게도 수렴(통합) 방향으로 나아가고 있습니다.",
+   ctx:"Sawyer Merritt 포스트 댓글. SpaceX·Tesla·xAI 통합 암시. 2026년 SpaceX IPO·합병설로 재조명됨"},
+  {id:19,date:"2026-03-31",cat:"Optimus",likes:"287K",reposts:"76K",impact:"medium",
+   en:"Optimus 3 is mobile but requires some finishing touches before it is ready to be shown to the world.",
+   ko:"Optimus 3는 작동 가능하지만, 세상에 공개되기 전 마무리 작업이 조금 더 필요합니다.",
+   ctx:"Q1'26 마지막 날 Optimus V3 공개 지연 공식 발표. 당초 Q1 공개 목표였으나 슬립"},
+  {id:20,date:"2026-03-31",cat:"Terafab",likes:"198K",reposts:"54K",impact:"high",
+   en:"Either we build the Terafab or we do not have the chips, and we need the chips, so we build the Terafab.",
+   ko:"Terafab을 짓거나, 칩이 없거나 둘 중 하나입니다. 칩이 필요하니 Terafab을 짓습니다.",
+   ctx:"Tesla·SpaceX·xAI 3사 공동 반도체 팹 착공 필요성 강조. Giga Texas 인근 착공 확정"},
+  {id:21,date:"2026-01-06",cat:"FSD",likes:"11K",reposts:"1.1K",impact:"medium",
+   en:"The actual time from when FSD sort of works to where it is much safer than a human is several years.",
+   ko:"FSD가 어느 정도 작동하는 시점부터 인간보다 훨씬 안전해지는 단계까지는 수년이 걸립니다. 레거시 OEM은 그 이후에야 대규모로 탑재할 것입니다.",
+   ctx:"1M 조회수. Tesla FSD 경쟁우위 수년간 유지 전망 강조. 기술 해자 명확히 제시"},
+  {id:22,date:"2026-01-13",cat:"FSD",likes:"91K",reposts:"10K",impact:"high",
+   en:"Tesla will stop selling FSD after Feb 14. FSD will only be available as a monthly subscription thereafter.",
+   ko:"Tesla는 2월 14일 이후 FSD 판매를 중단합니다. 이후 FSD는 월정액 구독으로만 제공됩니다.",
+   ctx:"FSD 일시불 판매 종료 공식 발표. $99/월 구독 전환. ARR 기반 반복수익 모델 시작"},
+  {id:23,date:"2026-01-22",cat:"FSD",likes:"39K",reposts:"4.8K",impact:"high",
+   en:"The $99/month for supervised FSD will rise as capabilities improve. The massive value jump is unsupervised FSD.",
+   ko:"감독형 FSD 월 $99는 성능 향상에 따라 인상됩니다. 진정한 가치 도약은 무감독 FSD 도달 시점입니다.",
+   ctx:"Autopilot 단종·FSD 구독 전환 맥락. 무감독 FSD 가격 프리미엄 예고. ARR 성장 기반 마련"},
+  {id:24,date:"2026-03-11",cat:"Tesla전략",likes:"77K",reposts:"12K",impact:"high",
+   en:"Macrohard or Digital Optimus is a joint xAI-Tesla project. Grok is the master conductor/navigator to direct digital Optimus.",
+   ko:"Digital Optimus는 xAI-Tesla 공동 프로젝트. Grok이 세계를 깊이 이해하며 Digital Optimus를 지휘합니다.",
+   ctx:"Tesla xAI $2B 투자 공식화 이후 AI 통합 아키텍처 공개. Grok+Optimus 결합 구조 첫 언급"},
+  {id:25,date:"2026-04-01",cat:"FSD",likes:"59K",reposts:"5.5K",impact:"high",
+   en:"FSD 14.3 is in Tesla employee beta now and will probably go to wide release end of week.",
+   ko:"FSD 14.3이 현재 Tesla 직원 베타 테스트 중이며, 이번 주 말 정식 출시 예정입니다.",
+   ctx:"48M 조회수. FSD v14.3 광역 출시 임박 공식 발표. 마지막 퍼즐 조각 도달 시사"},
+  {id:26,date:"2026-04-10",cat:"FSD",likes:"76K",reposts:"10K",impact:"high",
+   en:"First (supervised) FSD approval in Europe! Congratulations to the Tesla team and thank you to the Netherlands regulatory authorities.",
+   ko:"유럽 최초 감독형 FSD 승인! Tesla 팀과 네덜란드 규제 당국에 감사드립니다.",
+   ctx:"FSD 유럽 최초 승인 (네덜란드, 2026-04-10). 12개국 추가 심사 진행 중. 글로벌 확장 전환점"},
+  {id:27,date:"2026-06-18",cat:"Tesla전략",likes:"89K",reposts:"21K",impact:"high",
+   en:"Tesla will deploy millions of MEGAPOD AI compute units at Supercharger stations worldwide. 7 gigawatts of available power, zero permitting delay.",
+   ko:"Tesla는 전 세계 슈퍼차저 스테이션에 수백만 대의 MEGAPOD AI 컴퓨팅 유닛을 배포할 것입니다. 가용 전력 7기가와트, 허가 지연 없음.",
+   ctx:"MEGAPOD USPTO 상표 출원 당일(2026.06.18). Supercharger 인프라 기반 분산 AI 데이터센터 구상 공식화. Digital Optimus·Terafab과 연계"},
+  {id:28,date:"2025-06-22",cat:"Tesla전략",likes:"234K",reposts:"45K",impact:"high",
+   en:"Super congratulations to the @Tesla_AI software & chip design teams on a successful @Robotaxi launch!! Culmination of a decade of hard work. Both the AI chip and software teams were built from scratch within Tesla.",
+   ko:"Tesla AI 소프트웨어·칩 설계 팀의 성공적인 로보택시 출시를 진심으로 축하합니다!! 10년간의 노력의 결실입니다. AI 칩과 소프트웨어 팀 모두 Tesla 내부에서 처음부터 구축했습니다.",
+   ctx:"오스틴 로보택시 서비스 출시 당일. Tesla AI·HW 팀 10년 성과 결실 공개 치하. 무감독 FSD 상업화의 역사적 전환점"},
+  {id:29,date:"2025-07-14",cat:"Tesla전략",likes:"312K",reposts:"58K",impact:"high",
+   en:"Just left the @Tesla design studio. Most epic demo ever by end of year. Ever.",
+   ko:"방금 Tesla 디자인 스튜디오를 나왔습니다. 올해 말까지 역대 가장 epic한 데모가 있을 것입니다. 정말로.",
+   ctx:"25M 조회수. Tesla 호손 디자인 스튜디오 방문 직후. Roadster·Optimus V3 공개 암시로 해석. 2025년 말 대규모 이벤트 예고"},
+  {id:30,date:"2026-03-04",cat:"Optimus",likes:"198K",reposts:"38K",impact:"high",
+   en:"Tesla will be one of the companies to make AGI and probably the first to make it in humanoid/atom-shaping form.",
+   ko:"Tesla는 AGI를 만들 기업 중 하나가 될 것이며, 아마도 휴머노이드/원자 형태로 최초로 구현하는 기업이 될 것입니다.",
+   ctx:"Giga Berlin Cybercab 인터뷰 맥락. xAI·Tesla AI 통합 연계. Optimus가 Tesla의 AGI 구현체라는 비전 공식화"},
 ];
 
+
 const BASE_INST = [
-  {id:1,date:"2026-04-06~08",inst:"ARK Invest (Cathie Wood)",action:"BUY",amt:"$28M",shares:"81K주",note:"저점 매수. 목표가 $4,600",sent:"bullish"},
+  {id:1,date:"2026-04-06~08",inst:"ARK Invest (Cathie Wood)",action:"BUY",amt:"$28M",shares:"81K주",note:"저점 매수 $28M. 2026년 목표가 $4,600 유지 (베이스). 불케이스 $5,800. 로보택시가 기업가치의 60% 기여 전망",sent:"bullish"},
+ 
   {id:2,date:"2026-01",inst:"ARK Invest",action:"SELL",amt:"$44M",shares:"132K주",note:"차익실현, 목표가 상향 직전",sent:"neutral"},
   {id:3,date:"2025-12-22",inst:"ARK Invest",action:"SELL",amt:"$29M",shares:"60.7K주",note:"4주 연속 매도 트렌드",sent:"neutral"},
   {id:4,date:"2025-11-06",inst:"ARK Invest",action:"SELL",amt:"$87M",shares:"181K주",note:"차익실현, Mag7 다른 종목 매수",sent:"neutral"},
   {id:5,date:"2025-Q3",inst:"Vanguard Group",action:"HOLD",amt:"~$94B",shares:"229.8M주",note:"S&P500 지수추종 자동 보유",sent:"neutral"},
-  {id:6,date:"2025-Q3",inst:"JPMorgan (R. Brinkman)",action:"RATE",amt:"목표 $145",shares:"—",note:"Underweight 유지. EPS $0.30 하향 (구 애널리스트)",sent:"bearish"},
-  {id:7,date:"2026-06-05",inst:"JPMorgan (Rajat Gupta)",action:"RATE",amt:"목표 $475",shares:"—",note:"Underweight→Neutral. $145→$475 (+228%). 수직통합 재평가",sent:"bullish"},
-  {id:8,date:"2025-Q2",inst:"Wedbush (Dan Ives)",action:"RATE",amt:"목표 $600",shares:"—",note:"Outperform. AI 전환 역사적 규모. 로보택시 30개 도시",sent:"bullish"},
+ 
+ 
+ 
+  {id:9,date:"2026-Q1",inst:"JPMorgan Chase",action:"BUY",amt:"$551.5M",shares:"1,483,545주",note:"Q1'26 13F: 지분 추가. 총 46,075,161주 보유. 분기말 시가 $17.12B. 목표가 업그레이드(→$475) 전 매수",sent:"bullish"},
+  {id:10,date:"2026-Q4(2025)",inst:"Vanguard Group",action:"BUY",amt:"~$2.7B",shares:"6.6M주 추가",note:"Q4 2025 13F: 2022년 이후 최대 분기 매수. 총 259M주 보유. 시가 $102.85B",sent:"bullish"},
+  {id:11,date:"2026-Q1",inst:"Citadel Advisors",action:"BUY",amt:"—",shares:"지분 확대",note:"Q1 2026 13F: 총 보유 상위 6위권. 헤지펀드 중 최대 포지션",sent:"bullish"},
+  {id:12,date:"2026-06-18",inst:"ARK Invest (Cathie Wood)",action:"BUY",amt:"$22M",shares:"추가 매수",note:"오스틴 무감독 로보택시 탑승 영상 공개 직후 $22M 추가 매수. $75 주차 위반 티켓을 신규 모델 비용 항목으로 추가 - 불케이스 $4,600 재확인",sent:"bullish"},
+  {id:13,date:"2026-Q1",inst:"BlackRock",action:"HOLD",amt:"—",shares:"기관 보유 2위",note:"Q1 2026 13F 기준 Tesla 기관 보유 2위. 글로벌 최대 자산운용사($10조 AUM). 지수추종·액티브 혼합 보유",sent:"neutral"},
+  {id:14,date:"2026-Q1",inst:"State Street",action:"HOLD",amt:"—",shares:"기관 보유 3위",note:"Q1 2026 13F 기준 3위. S&P500·ETF 지수추종 자동 보유. SPDR ETF 계열 운용",sent:"neutral"},
+  {id:15,date:"2026-Q1",inst:"Geode Capital Management",action:"HOLD",amt:"—",shares:"기관 보유 4위",note:"Q1 2026 13F 기준 4위. Fidelity 계열 지수 포트폴리오 운용. 패시브 전략",sent:"neutral"},
+  {id:16,date:"2026-Q1",inst:"Susquehanna International Group",action:"HOLD",amt:"—",shares:"기관 보유 5위 신규",note:"Q1 2026 13F 신규 상위 5위 진입. 퀀트·옵션·파생상품 전문 헤지펀드. 포지션 확대 추정",sent:"neutral"},
+  {id:17,date:"2026-Q1",inst:"Capital World Investors",action:"HOLD",amt:"—",shares:"기관 보유 8위",note:"American Funds 운용사. 장기 액티브 투자 전략. Tesla EV·AI 성장 테제 보유",sent:"bullish"},
+  {id:18,date:"2026-Q1",inst:"Jane Street Group",action:"HOLD",amt:"—",shares:"기관 보유 9위 신규",note:"Q1 2026 13F 신규 상위 9위 진입. 퀀트·ETF 차익거래 전문. 대규모 파생 포지션 병행 추정",sent:"neutral"},
+  {id:19,date:"2026-Q1",inst:"FMR LLC (Fidelity)",action:"HOLD",amt:"—",shares:"기관 보유 10위",note:"Fidelity 자산운용. 액티브·지수 혼합. Contrafund 등 주요 펀드 통해 보유",sent:"neutral"},
 ];
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
 
 const OWNERSHIP = [
-  {name:"일론 머스크",value:13.8,color:"#E31937",shares:"717M주"},
-  {name:"Vanguard",value:7.3,color:"#00d4ff",shares:"229.8M주"},
-  {name:"BlackRock",value:5.8,color:"#00e676",shares:"188.8M주"},
-  {name:"State Street",value:3.4,color:"#ffd600",shares:"114.7M주"},
+  {name:"일론 머스크",value:19.9,color:"#E31937",shares:"1.12B주"},
+  {name:"Vanguard",value:7.3,color:"#38BDF8",shares:"229.8M주"},
+  {name:"BlackRock",value:5.8,color:"#10b981",shares:"188.8M주"},
+  {name:"State Street",value:3.4,color:"#fbbf24",shares:"114.7M주"},
   {name:"Geode Capital",value:1.7,color:"#a78bfa",shares:"~55M주"},
   {name:"Larry Ellison",value:1.4,color:"#f97316",shares:"~46M주"},
-  {name:"기타 기관",value:24.5,color:"#334155",shares:"~815M주"},
+  {name:"기타 기관",value:24.5,color:"var(--bg-elev)",shares:"~815M주 (총 4,382개 기관·42.5%)"},
   {name:"리테일",value:35.1,color:"#1e3a5f",shares:"~1.17B주"},
   {name:"기타 내부자",value:7.0,color:"#5b21b6",shares:"~233M주"},
 ];
 
 const CEO_TL = [
-  {y:"1971",t:"남아공 프리토리아 출생",d:"아버지 엔지니어, 어머니 캐나다 출신. 어린 시절 왕따 경험하며 독서와 컴퓨터에 몰두."},
-  {y:"1983",t:"게임 'Blastar' 판매",d:"12세에 BASIC으로 우주 슈팅 게임 제작. 잡지사에 $500 판매."},
+  {y:"1971",t:"남아공 프리토리아 출생",d:"학교에서 또래에게 입원할 정도로 심한 폭력을 당했고, 아버지와의 관계도 평생의 트라우마로 남음. 이 시기가 훗날 고통에 무감각해지는 성향 형성에 영향을 줌(Isaacson, 2023)."},
+  {y:"1983~1984",t:"게임 'Blastar' 제작·판매",d:"1983년(12세) BASIC으로 우주 슈팅 게임 Blastar 제작. 1984년(13세) 남아공 PC and Office Technology 잡지에 소스코드 게재·$500 판매. 훗날 Google 엔지니어가 웹 버전으로 복원."},
   {y:"1995",t:"Zip2 창업",d:"스탠퍼드 박사 과정 이틀 만에 자퇴. 1999년 Compaq에 $307M 매각."},
   {y:"1999",t:"X.com → PayPal",d:"X.com 설립, 합병 후 PayPal. 2002년 eBay가 $1.5B에 인수."},
+  {y:"2000",t:"말라리아 생사 고비",d:"남아공 휴가 중 심각한 말라리아에 감염. 거의 사망 직전까지 갔다가 회복. Vance 전기에 따르면 이 경험이 '시간을 낭비하지 말라'는 머스크의 극단적 집중력 형성에 기여했다고 기술."},
   {y:"2002",t:"SpaceX 창립",d:"Mars 이주 목표. 제1원칙 사고로 로켓 비용 99% 절감 목표."},
   {y:"2004",t:"Tesla 투자 참여",d:"시리즈 A 최대 투자자로 참여. 이사회 의장 역임."},
-  {y:"2008",t:"Tesla CEO 취임 & 위기",d:"금융위기 속 개인 전 재산 투입, Tesla·SpaceX 동시 구해냄."},
+  {y:"2008",t:"Tesla CEO 취임 & 위기",d:"Falcon 1 3차 발사 실패, 이혼, Tesla 파산 위기가 동시에 겹친 최악의 해. 크리스마스 직전 Falcon 1 4차 성공과 Tesla 긴급투자 유치로 동시에 회생 — Isaacson은 이를 '벼랑 끝 더블 베팅'으로 서술."},
   {y:"2010",t:"Tesla NASDAQ 상장",d:"공모가 $17 → 현재 $391 (2,200%+)."},
+  {y:"2012",t:"Tesla Model S 첫 배송",d:"2012.06.22 최초 고객 배송 감독. Consumer Reports 역대 최고점 99/100 획득. 이 판매 급증이 2013년 Google 인수 협상 철회의 직접적 계기가 됨."},
+  {y:"2013",t:"Google 인수 협상 → 극적 반전",d:"운영자금 2주치만 남은 파산 직전 위기. 공장 가동 중단 후 Larry Page(Google)에게 $60억 매각 + $50억 공장투자 제안, 구두 합의 후 계약서 작성 시작. 그러나 Model S 판매 급증·Consumer Reports 99/100(역대 최고점)으로 Q1 흑자($1,100만) 달성 → 머스크가 직접 전화해 매각 철회. \"그는 더 이상 구원자가 필요 없었다\" — Ashlee Vance 전기(2015)"},
+  {y:"2015",t:"OpenAI 공동창업 + SpaceX 재사용 로켓 착륙",d:"Sam Altman과 OpenAI 공동창업(AI 안전성·오픈소스 목표). 2018년 갈등 끝 탈퇴 후 2023년 xAI 설립. 같은 해 SpaceX Falcon 9 부스터 역사상 최초 수직 착륙 성공 — 재사용 가능 궤도 로켓 시대 개막."},
+  {y:"2020",t:"SpaceX 첫 유인 비행 성공",d:"2020.05.30 Falcon 9 / Crew Dragon으로 NASA 우주비행사 2명을 ISS에 수송. 미국 민간 우주선 최초 유인 비행. 9년 만의 미국 자체 유인 우주비행 복귀. Isaacson 전기가 '상업 우주시대의 시작'으로 기술."},
   {y:"2021",t:"세계 최고 부자 등극",d:"Tesla 시총 $1조 돌파. Time 올해의 인물 선정."},
-  {y:"2022",t:"Twitter $44B 인수 → X",d:"언론 자유 명분으로 인수. X Corp 리브랜딩."},
+  {y:"2022",t:"Twitter $44B 인수 → X",d:"인수 직후 대량 해고와 광고주 이탈로 매출 급감 — Isaacson은 머스크의 충동적 의사결정·극단적 작업강도 요구 패턴의 대표 사례로 서술. 이후 xAI Grok과 결합돼 AI 전략 자산으로 재포지셔닝."},
+  {y:"2024",t:"Neuralink 첫 인간 이식 + Starship 부스터 포획",d:"2024.01.29 Neuralink 첫 인간 환자(29세 사지마비 Noland Arbaugh) 뇌 임플란트 성공 — 생각만으로 마우스 제어. 2024.10 Starship Super Heavy 부스터를 발사탑 '메카질라' 집게로 공중 포획 성공 — 완전 재사용 우주 시대 개막."},
+  {y:"2025",t:"Tesla $1조 보상안 승인",d:"주주총회에서 차량 2,000만대·시총 $8.5조 등 10년 목표 달성 시 최대 $1조 규모 스톡옵션 패키지 승인. 트릴리어네어 등극의 첫 번째 경로."},
   {y:"2025",t:"DOGE 수장 → 5월 퇴임",d:"트럼프 2기 DOGE 수장 합류 → 4개월 만에 퇴임, Tesla CEO 복귀."},
-  {y:"2026",t:"순자산 $834B · 물리적 AI 전환",d:"Terafab 착공, Model S·X 단종, Robotaxi 달라스·휴스턴 확장."},
+  {y:"2026.02",t:"SpaceX-xAI 합병",d:"xAI를 SpaceX에 합병. Grok이 Digital Optimus를 지휘하는 통합 AI 아키텍처 공식화. SpaceX 밸류에이션이 약 $1조로 상승하는 결정적 계기."},
+  {y:"2026.06",t:"SpaceX 나스닥 상장 — 역대 최대 IPO",d:"6/12 SPCX 티커로 상장. 공모가 $135 → 첫날 $150 마감, 밸류에이션 약 $1.77조. $75B 조달로 역대 최대 IPO. 머스크 SpaceX 지분가치 약 $690~866억 추산. 6/24 $250억 채권 발행(브릿지론 $175억 상환 목적, 현금보유 $1,008억)."},
+  {y:"2026.06",t:"세계 최초 '트릴리어네어' 등극",d:"SpaceX 상장 직후 순자산 약 $1.05~1.1조 달성, 인류 역사상 최초의 1조 달러 자산가. Tesla 지분 + SpaceX 지분 합산. 2위 Larry Page와 약 $700B 이상 격차."},
+  {y:"2026.06",t:"2018년 보상안 행사 — 지분 19.9% 급증",d:"6/16 옵션 행사로 3.04억주 취득(행사가 $23.34). 순증 2.86억주, 총 보유 약 11.2억주(지분 19.9%)로 상승. 신규 주식은 2028년 1월까지 베스팅 후 5년 락업(2033년까지 매도 불가)."},
+  {y:"2026",t:"물리적 AI 전환 가속",d:"Terafab 착공, Model S·X 단종, Robotaxi 오스틴 전역·텍사스 2개 도시 확장. MEGAPOD AI 데이터센터 상표 출원(6/18). Roadster 8월 공개 예정. NatPower $5B 메가팩 계약(유럽 역대 최대). Cars.com 6년 연속 미국산 차량 1위(Model 3 #1, Model Y #2)."},
 ];
 
 const CEO_MILESTONES = [
@@ -335,35 +524,37 @@ const VALUES = [
 const XCATS = ["ALL","Tesla전략","FSD","Robotaxi","Cybercab","Optimus","AI·Dojo","Terafab","DOGE·정치","X·기술"];
 
 const ANALYST_TARGETS = [
-  {date:"2026.06.05",inst:"JPMorgan",analyst:"Rajat Gupta",rating:"Neutral",tp:475,color:"#00d4ff",reason:"수직 통합 재평가. EPS 2030 $7.50 전망. 11년 약세론 종료.",badge:"🔥"},
-  {date:"2026.01.10",inst:"Wedbush",analyst:"Dan Ives",rating:"Outperform",tp:600,color:"#00e676",reason:"AI 전환 역사적 변곡점. 로보택시 30개 도시 가속.",badge:null},
-  {date:"2026.01.08",inst:"TD Cowen",analyst:"—",rating:"Buy",tp:519,color:"#00e676",reason:"Cybercab $0.30/마일 — 라이드셰어 구조적 파괴.",badge:null},
-  {date:"2026.01.05",inst:"Stifel",analyst:"—",rating:"Buy",tp:508,color:"#00e676",reason:"로보택시 7개 도시 확장. Optimus V3 공급망 주목.",badge:null},
-  {date:"2025.12.15",inst:"Piper Sandler",analyst:"Alex Potter",rating:"Overweight",tp:500,color:"#00e676",reason:"에너지·소프트웨어 스케일링 지속.",badge:null},
-  {date:"2025.12.11",inst:"Morgan Stanley",analyst:"Adam Jonas",rating:"Equal-Weight",tp:425,color:"#ffd600",reason:"AI·Optimus 가치 인정. EV 경쟁·실행 리스크 병존.",badge:null},
-  {date:"2026.01.29",inst:"Goldman Sachs",analyst:"Mark Delaney",rating:"Neutral",tp:405,color:"#ffd600",reason:"CapEx $25B → FCF 음전환. 실행 리스크 높음.",badge:null},
-  {date:"2026.01.15",inst:"RBC Capital",analyst:"Tom Narayan",rating:"Outperform",tp:320,color:"#ffd600",reason:"전통 EV 경쟁 심화. 자율주행 타임라인 불확실.",badge:null},
+  {date:"2026.06.05",inst:"JPMorgan",analyst:"Rajat Gupta",rating:"Neutral",tp:475,color:"#38BDF8",reason:"수직 통합 재평가. EPS 2030 $7.50 전망. 11년 약세론 종료.",badge:"🔥"},
+  {date:"2026.01.10",inst:"Wedbush",analyst:"Dan Ives",rating:"Outperform",tp:600,color:"#10b981",reason:"AI 전환 역사적 변곡점. 로보택시 30개 도시 가속.",badge:null},
+  {date:"2026.01.08",inst:"TD Cowen",analyst:"—",rating:"Buy",tp:519,color:"#10b981",reason:"Cybercab $0.30/마일 — 라이드셰어 구조적 파괴.",badge:null},
+  {date:"2026.01.05",inst:"Stifel",analyst:"—",rating:"Buy",tp:508,color:"#10b981",reason:"로보택시 7개 도시 확장. Optimus V3 공급망 주목.",badge:null},
+  {date:"2025.12.15",inst:"Piper Sandler",analyst:"Alex Potter",rating:"Overweight",tp:500,color:"#10b981",reason:"에너지·소프트웨어 스케일링 지속.",badge:null},
+  {date:"2025.12.11",inst:"Morgan Stanley",analyst:"Adam Jonas",rating:"Equal-Weight",tp:425,color:"#fbbf24",reason:"AI·Optimus 가치 인정. EV 경쟁·실행 리스크 병존.",badge:null},
+  {date:"2026.01.29",inst:"Goldman Sachs",analyst:"Mark Delaney",rating:"Neutral",tp:405,color:"#fbbf24",reason:"CapEx $25B → FCF 음전환. 실행 리스크 높음.",badge:null},
+  {date:"2026.01.15",inst:"RBC Capital",analyst:"Tom Narayan",rating:"Outperform",tp:320,color:"#fbbf24",reason:"전통 EV 경쟁 심화. 자율주행 타임라인 불확실.",badge:null},
   {date:"2026.04.01",inst:"Wells Fargo",analyst:"Colin Langan",rating:"Underweight",tp:125,color:"#E31937",reason:"EV 수요 구조적 둔화. 밸류에이션 현실과 괴리.",badge:null},
   {date:"2025.01.01",inst:"ARK Invest",analyst:"Cathie Wood",rating:"—",tp:4600,color:"#a78bfa",reason:"로보택시+Optimus 대량생산 DCF. 2029 불마켓 가정.",badge:"⚠극단값"},
+  {date:"2026.06.22",inst:"Jefferies",analyst:"—",rating:"Hold",tp:375,color:"#94A3B8",reason:"SpaceX 합병 기대로 TSLA의 SPCX 추종주식화 위험 경고. 로보택시·휴머노이드 초기 손실 센터 전망. 밸류에이션-실적 괴리 지속.",badge:null},
+  {date:"2026.05.19",inst:"Barclays",analyst:"Dan Levy",rating:"Hold",tp:360,color:"#94A3B8",reason:"메모리 칩·구리 원자재 비용 상승. Model Y 가격 인상으로 일부 상쇄. 로보택시·AI 기대 이미 주가 반영.",badge:null},
 ];
 
 /* ═══════════════════════════════════════
    STYLES
 ═══════════════════════════════════════ */
-const R="#E31937",AC="#00d4ff",GR="#00e676",YL="#ffd600",MU="#7070a0",TX="#e8e8f0",DK="#050508",SF="#141420",BD="rgba(227,25,55,0.22)";
+const R="#E31937",AC="#38BDF8",GR="#10b981",YL="#fbbf24",MU="var(--text-2)",TX="var(--text-1)",DK="var(--bg)",SF="var(--bg-card)",SF2="var(--bg-elev)",BD="var(--border)";
 
-const card = {background:SF,border:"1px solid "+BD,borderRadius:4,padding:"18px 20px"};
-const lbl  = {fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:3,color:R,textTransform:"uppercase",marginBottom:5};
-const ttl  = {fontFamily:"'Orbitron',monospace",fontSize:18,fontWeight:700,color:"#fff",marginBottom:16};
-const fb   = a => ({fontFamily:"'Space Mono',monospace",fontSize:9,padding:"5px 11px",borderRadius:2,cursor:"pointer",
+const card = {background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:16,padding:"18px 20px"};
+const lbl  = {fontFamily:"'Pretendard',sans-serif",fontSize:12,letterSpacing:1.5,color:R,textTransform:"uppercase",marginBottom:6,fontWeight:600,textAlign:"center"};
+const ttl  = {fontFamily:"'Pretendard',sans-serif",fontSize:20,fontWeight:800,color:"var(--text-1)",marginBottom:16,letterSpacing:-0.3,textAlign:"center"};
+const fb   = a => ({fontFamily:"'Pretendard',sans-serif",fontSize:11,padding:"5px 14px",borderRadius:20,cursor:"pointer",
                     border:a?"1px solid "+R:"1px solid rgba(255,255,255,0.1)",
                     background:a?"rgba(227,25,55,0.15)":"transparent",color:a?R:MU,letterSpacing:1});
-const inp  = {background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:3,
-              color:TX,padding:"7px 11px",fontFamily:"'Noto Sans KR',sans-serif",fontSize:12,outline:"none"};
+const inp  = {background:"var(--border-subtle)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:3,
+              color:TX,padding:"7px 11px",fontFamily:"'Pretendard','Noto Sans KR',sans-serif",fontSize:12,outline:"none"};
 
 const SENT_ST = {
-  positive:{br:"rgba(0,230,118,.3)",c:GR},
-  mixed:   {br:"rgba(255,214,0,.3)", c:YL},
+  positive:{br:"rgba(16,185,129,.3)",c:GR},
+  mixed:   {br:"rgba(251,191,36,.3)", c:YL},
   negative:{br:"rgba(227,25,55,.3)", c:R},
 };
 const ACT_C  = {BUY:GR,SELL:R,HOLD:MU,RATE:AC};
@@ -372,16 +563,24 @@ const IMP_C  = {high:R,medium:YL,low:MU};
 
 /* ─── 재사용 컴포넌트 ─────────────────── */
 function KPI({label,value,sub,color,badge}) {
+  const isMobile = useIsMobile();
   return (
-    <div style={{...card,flex:1,minWidth:120,position:"relative"}}>
-      {badge && (
-        <div style={{position:"absolute",top:8,right:8,background:badge==="NEW"?"rgba(0,212,255,.2)":"rgba(227,25,55,.2)",
-          border:"1px solid "+(badge==="NEW"?AC:R),color:badge==="NEW"?AC:R,
-          fontFamily:"'Space Mono',monospace",fontSize:7,padding:"1px 5px",borderRadius:2}}>{badge}</div>
+    <div style={{flex:"1 1 130px",minWidth:0,position:"relative",minHeight:88,display:"flex",flexDirection:"column",justifyContent:"space-between",background:SF2,border:"0.5px solid rgba(255,255,255,0.06)",borderRadius:8,padding:"14px 16px",textAlign:"center",alignItems:"center"}}>
+      <div style={{width:"100%",display:"flex",justifyContent:"center",alignItems:"center",gap:6,position:"relative"}}>
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?11:13,color:MU,fontWeight:600,letterSpacing:0}}>{label}</div>
+        {badge && (
+          <div style={{background:badge==="NEW"?"rgba(56,189,248,.15)":badge==="↑"?"rgba(16,185,129,.15)":"rgba(227,25,55,.15)",
+            border:"1px solid "+(badge==="NEW"?AC:badge==="↑"?GR:R),
+            color:badge==="NEW"?AC:badge==="↑"?GR:R,
+            fontFamily:"'Pretendard',sans-serif",fontSize:10,padding:"1px 6px",borderRadius:10,fontWeight:600}}>{badge}</div>
+        )}
+      </div>
+      <div style={{fontFamily:"'JetBrains Mono','Pretendard',monospace",fontSize:isMobile?17:21,fontWeight:700,color:color||"var(--text-1)",lineHeight:1.1,letterSpacing:-0.5,marginTop:6,textAlign:"center"}}>{value}</div>
+      {sub && (
+        <div style={{marginTop:8,textAlign:"center"}}>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU}}>{sub}</span>
+        </div>
       )}
-      <div style={lbl}>{label}</div>
-      <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,fontWeight:700,color:color||"#fff",lineHeight:1.1}}>{value}</div>
-      {sub && <div style={{fontSize:10,color:MU,marginTop:4}}>{sub}</div>}
     </div>
   );
 }
@@ -389,7 +588,7 @@ function KPI({label,value,sub,color,badge}) {
 function RevTip({active,payload,label}) {
   if (!active||!payload?.length) return null;
   return (
-    <div style={{background:"#1a1a28",border:"1px solid rgba(227,25,55,.4)",borderRadius:4,padding:"8px 12px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
+    <div style={{background:"var(--bg-card)",border:"1px solid rgba(227,25,55,.4)",borderRadius:4,padding:"8px 12px",fontFamily:"'Pretendard',sans-serif",fontSize:10}}>
       <div style={{color:R,marginBottom:4}}>{label}</div>
       {payload.map((p,i) => (
         <div key={i} style={{color:p.color,marginBottom:2}}>{p.name}: <b>{"$"}{(p.value/1000).toFixed(1)}B</b></div>
@@ -402,10 +601,10 @@ function AIBtn({onUpdate,loading,label}) {
   return (
     <button onClick={onUpdate} disabled={loading}
       style={{display:"flex",alignItems:"center",gap:6,
-        background:loading?"rgba(0,212,255,0.05)":"rgba(0,212,255,0.12)",
-        border:"1px solid "+(loading?"rgba(0,212,255,0.2)":"rgba(0,212,255,0.5)"),
-        color:loading?MU:AC,fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:1,
-        padding:"6px 14px",borderRadius:3,cursor:loading?"not-allowed":"pointer",whiteSpace:"nowrap"}}>
+        background:loading?"rgba(49,130,246,0.05)":"rgba(49,130,246,0.15)",
+        border:"1px solid "+(loading?"rgba(49,130,246,0.2)":"rgba(49,130,246,0.5)"),
+        color:loading?MU:"#60a5fa",fontFamily:"'Pretendard',sans-serif",fontSize:12,letterSpacing:0,fontWeight:600,
+        padding:"7px 16px",borderRadius:20,cursor:loading?"not-allowed":"pointer",whiteSpace:"nowrap"}}>
       {loading ? <><span style={{animation:"spin 1s linear infinite",display:"inline-block"}}>◌</span>{" 검색 중..."}</> : <><span>✦</span>{" "}{label||"AI 업데이트"}</>}
     </button>
   );
@@ -414,9 +613,9 @@ function AIBtn({onUpdate,loading,label}) {
 function LogBadge({log}) {
   if (!log) return null;
   return (
-    <div style={{background:log.ok?"rgba(0,230,118,0.1)":"rgba(227,25,55,0.1)",
-      border:"1px solid "+(log.ok?"rgba(0,230,118,0.3)":"rgba(227,25,55,0.3)"),
-      color:log.ok?GR:R,fontFamily:"'Space Mono',monospace",fontSize:9,padding:"4px 10px",borderRadius:3}}>
+    <div style={{background:log.ok?"rgba(16,185,129,.1)":"rgba(227,25,55,0.1)",
+      border:"1px solid "+(log.ok?"rgba(16,185,129,.3)":"rgba(227,25,55,0.3)"),
+      color:log.ok?GR:R,fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:600,padding:"4px 12px",borderRadius:20}}>
       {log.ok ? "✓ "+log.msg : "✗ "+log.msg}
     </div>
   );
@@ -424,9 +623,14 @@ function LogBadge({log}) {
 
 function SHdr({sub,title,children}) {
   return (
-    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:8}}>
-      <div><div style={lbl}>{sub}</div><div style={ttl}>{title}</div></div>
-      {children}
+    <div style={{marginBottom:20}}>
+      <div style={{textAlign:"center",marginBottom:children?12:0}}>
+        <div style={{...lbl,textAlign:"center"}}>{sub}</div>
+        <div style={{...ttl,textAlign:"center"}}>{title}</div>
+      </div>
+      {children && (
+        <div style={{display:"flex",justifyContent:"center"}}>{children}</div>
+      )}
     </div>
   );
 }
@@ -435,8 +639,113 @@ function SHdr({sub,title,children}) {
    MAIN APP
 ═══════════════════════════════════════ */
 export default function App() {
+  /* ── responsive ── */
+  const isMobile = useIsMobile();
+
+  /* ── theme ── */
+  const [theme, setTheme] = useState("dark");
+  const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
+
+  /* ── progress bar ── */
+  const [progress, setProgress] = useState(0);
+  /* ── 뉴스 데이터 로드 ── */
+  useEffect(() => {
+    const load = async () => {
+      setNewsLoading(true);
+      try {
+        const res = await fetch("https://tesla-proxy.daybridge2025.workers.dev/news?days=30");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setNews(data.news || []);
+        setBreakingNews(data.breaking || []);
+        setNewsDates(data.dates || []);
+        setNewsMeta({ updatedAt: data.updatedAt || null, total: data.total ?? 0, error: null });
+      } catch(e) {
+        console.error("뉴스 로드 실패", e);
+        setNewsMeta({ updatedAt: null, total: 0, error: e.message || "Unknown error" });
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  /* ── 🆕 로보택시 데이터 로드 (v3.2) ── */
+  useEffect(() => {
+    const load = async () => {
+      setRoboLoading(true);
+      try {
+        const res = await fetch("https://tesla-proxy.daybridge2025.workers.dev/robotaxi");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setRoboLatest(data.latest || null);
+        setRoboHistory(data.history || []);
+        setRoboMeta({ updatedAt: data.updatedAt || null, count: data.count ?? 0, error: null, lastError: data.lastError || null });
+      } catch(e) {
+        console.error("로보택시 로드 실패", e);
+        setRoboMeta({ updatedAt: null, count: 0, error: e.message || "Unknown error", lastError: null });
+      } finally {
+        setRoboLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const pct = h.scrollTop / (h.scrollHeight - h.clientHeight);
+      setProgress(Math.min(100, Math.max(0, pct * 100)));
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+
+
+  /* ── IntersectionObserver: 활성 섹션 추적 (ScrollSpy) ── */
+  useEffect(() => {
+    const sections = document.querySelectorAll("section[id]");
+    const spy = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) setActiveSection(e.target.id);
+      });
+    }, { rootMargin:"-20% 0px -70% 0px", threshold: 0 });
+    sections.forEach(s => spy.observe(s));
+    return () => spy.disconnect();
+  }, []);
+
+  /* ── IntersectionObserver: 섹션 진입 애니메이션 ── */
+  useEffect(() => {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add("in");
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin:"0px 0px -40px 0px" });
+    document.querySelectorAll(".reveal, .reveal-fast").forEach(el => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
   /* ── tabs ── */
   const [mainTab, setMainTab]   = useState("company");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("section-news");
+  const [news, setNews]         = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsFilter, setNewsFilter]   = useState("전체");
+  const [newsDay, setNewsDay]         = useState(0);
+  const [newsDates, setNewsDates]     = useState([]);
+  const [breakingNews, setBreakingNews] = useState([]);
+  const [newsMeta, setNewsMeta] = useState({ updatedAt: null, total: 0, error: null });
+
+  /* ── 🆕 로보택시 state (v3.2) ── */
+  const [roboLatest,  setRoboLatest]  = useState(null);
+  const [roboHistory, setRoboHistory] = useState([]);
+  const [roboLoading, setRoboLoading] = useState(true);
+  const [roboMeta,    setRoboMeta]    = useState({ updatedAt: null, count: 0, error: null, lastError: null });
   const [perfSub, setPerfSub]   = useState("quarterly");
   const [perfView, setPerfView] = useState("revenue");
   const [annView, setAnnView]   = useState("revenue");
@@ -496,8 +805,9 @@ export default function App() {
   const [xSrch, setXSrch]      = useState("");
   const [xLang, setXLang]      = useState("ko");
   const [instFil, setInstFil]  = useState("ALL");
-  const [hdrH, setHdrH]        = useState(60);
-  const hdrRef = useCallback(node => { if (node) setHdrH(node.offsetHeight); }, []);
+  const [hdrH,    setHdrH]    = useState(60);
+  const hdrRef    = useCallback(node => { if (node) setHdrH(node.offsetHeight); }, []);
+  const tickerRef = useCallback(node => { if (node) setTickerH(node.offsetHeight); }, []);
 
   /* ── lockout countdown ── */
   useEffect(() => {
@@ -521,26 +831,38 @@ export default function App() {
         if (p?.value) setPosts(JSON.parse(p.value));
         if (i?.value) setInstActs(JSON.parse(i.value));
         if (s?.value) setStock(JSON.parse(s.value));
+        // 항상 Worker /stock에서 최신 주가 확인 (Cron 업데이트 반영)
+        try {
+          const sr = await fetch("https://tesla-proxy.daybridge2025.workers.dev/stock");
+          if (sr.ok) {
+            const sd = await sr.json();
+            if (sd.price) {
+              // 저장된 날짜보다 새 데이터면 업데이트
+              const storedDate = s?.value ? JSON.parse(s.value).date : "";
+              if (!storedDate || sd.date >= storedDate) {
+                setStock(prev => ({...prev, ...sd}));
+                await LS.set("tsla:stock", JSON.stringify({...sd}));
+              }
+            }
+          }
+        } catch(e2) { /* Worker 불가 시 저장값 유지 */ }
         const fsdVal = await LS.get("tsla:fsd");
         if (fsdVal?.value) setFsdMiles(JSON.parse(fsdVal.value));
       } catch(e) { /* storage unavailable, use defaults */ }
-      // ── 방문자 카운팅 (shared storage) ───────────────────────────
+      // ── 방문자 카운팅 (Cloudflare Workers KV) ──────────────────
       try {
-        const today = new Date().toISOString().slice(0,10);
-        const alreadyCounted = typeof sessionStorage !== "undefined" && sessionStorage.getItem("tsla_visited");
-        let totalRes    = await LS.getShared("visitors:total");
-        let todayRes    = await LS.getShared("visitors:"+today);
-        let total      = totalRes?.value  ? parseInt(totalRes.value)  : 0;
-        let todayCount = todayRes?.value  ? parseInt(todayRes.value)  : 0;
-        if (!alreadyCounted) {
-          total++;
-          todayCount++;
-          await LS.set("visitors:total",  String(total),      true).catch(() => {});
-          await LS.setShared("visitors:"+today, String(todayCount));
-          if (typeof sessionStorage !== "undefined") sessionStorage.setItem("tsla_visited", "1");
+        const isNew = !sessionStorage.getItem("tsla_visited");
+        const res = await fetch("https://tesla-proxy.daybridge2025.workers.dev/count", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ newVisit: isNew }),
+        });
+        if (res.ok) {
+          const vdata = await res.json();
+          setVisitors({ total: vdata.total, today: vdata.today, date: new Date().toISOString().slice(0,10) });
+          if (isNew) sessionStorage.setItem("tsla_visited", "1");
         }
-        setVisitors({total, today:todayCount, date:today});
-      } catch(e2) { /* shared storage 불가 시 무시 */ }
+      } catch(e2) { /* KV 불가 시 무시 */ }
       setStorageReady(true);
     })();
   }, []);
@@ -623,12 +945,17 @@ export default function App() {
   const updateStock = useCallback(async () => {
     setLdStock(true);
     try {
-      const d = await callClaude(SYS.stock, "Find Tesla TSLA current stock price and 52-week range. Return JSON.");
+      // Yahoo Finance → Cloudflare Worker /stock 프록시
+      const res = await fetch("https://tesla-proxy.daybridge2025.workers.dev/stock");
+      if (!res.ok) throw new Error("Worker HTTP "+res.status);
+      const d = await res.json();
+      if (d.error) throw new Error(d.error);
       if (d && d.price) {
         const updated = {...stock, ...d};
         setStock(updated);
         await save("tsla:stock", updated);
-        recordLog("stock", true, "주가 $"+d.price+" 업데이트");
+        const src = d.cached ? "캐시" : "Yahoo Finance";
+        recordLog("stock", true, "$"+d.price+" ("+src+") "+d.date);
       } else throw new Error("구조 오류");
     } catch(e) { recordLog("stock", false, e.message); }
     setLdStock(false);
@@ -637,13 +964,34 @@ export default function App() {
   const updatePerf = useCallback(async () => {
     setLd(l => ({...l, perf:true}));
     try {
-      const d = await callClaude(SYS.quarterly, "Find Tesla latest quarterly earnings. Return JSON.");
+      // 1차: SEC EDGAR API 자동 파싱
+      let d = null;
+      let source = "EDGAR";
+      try {
+        const res = await fetch("https://tesla-proxy.daybridge2025.workers.dev/edgar");
+        if (res.ok) {
+          const edgar = await res.json();
+          if (edgar.q && edgar.total) {
+            d = edgar;
+            source = "SEC EDGAR";
+          }
+        }
+      } catch(edgarErr) {
+        console.warn("EDGAR 실패, Claude로 대체:", edgarErr.message);
+      }
+
+      // 2차: EDGAR 실패 시 Claude AI로 폴백
+      if (!d) {
+        d = await callClaude(SYS.quarterly, "Find Tesla latest quarterly earnings. Return JSON.");
+        source = "Claude AI";
+      }
+
       if (d && d.q && d.total) {
         const exists = quarterly.some(q => q.q === d.q);
         if (!exists) {
           setQuarterly(prev => { const n = [...prev, d]; save("tsla:quarterly", n); return n; });
-          recordLog("perf", true, d.q+" 추가 — $"+(d.total/1000).toFixed(1)+"B");
-        } else recordLog("perf", false, d.q+" 이미 존재");
+          recordLog("perf", true, d.q+" 추가 — $"+(d.total/1000).toFixed(1)+"B ("+source+")");
+        } else recordLog("perf", false, d.q+" 이미 존재 ("+source+")");
       } else throw new Error("구조 오류");
     } catch(e) { recordLog("perf", false, e.message); }
     setLd(l => ({...l, perf:false}));
@@ -692,7 +1040,7 @@ export default function App() {
   }, [save]);
 
   const updateAll = useCallback(async () => {
-    await updateFsd(); await updateStock(); await updatePerf(); await updateEarnings(); await updateXPost(); await updateOwnership();
+    await updateFsd(); await updateFsd(); await updatePerf(); await updateEarnings(); await updateXPost(); await updateOwnership();
   }, [updateStock, updatePerf, updateEarnings, updateXPost, updateOwnership]);
 
   const resetStorage = useCallback(async () => {
@@ -721,7 +1069,12 @@ export default function App() {
   /* ── filtered data ── */
   const filtQ     = useMemo(() => yearFil === "ALL" ? quarterly : quarterly.filter(d => d.q.includes(yearFil.slice(2))), [quarterly, yearFil]);
   const filtCalls = useMemo(() => { const q = eSearch.toLowerCase(); return calls.filter(c => c.headline.toLowerCase().includes(q) || c.q.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q))); }, [calls, eSearch]);
-  const filtPosts = useMemo(() => { const q = xSrch.toLowerCase(); return posts.filter(p => (xCat === "ALL" || p.cat === xCat) && (p.en.toLowerCase().includes(q) || p.ko.toLowerCase().includes(q))); }, [posts, xCat, xSrch]);
+  const filtPosts = useMemo(() => {
+    const q = xSrch.toLowerCase();
+    return posts
+      .filter(p => (xCat === "ALL" || p.cat === xCat) && (p.en.toLowerCase().includes(q) || p.ko.toLowerCase().includes(q)))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [posts, xCat, xSrch]);
   const filtInst  = useMemo(() => instFil === "ALL" ? instActs : instActs.filter(d => d.action === instFil), [instActs, instFil]);
 
   const capexFcfData = useMemo(() => BASE_Q.slice(-8).map(d => ({q:d.q,capex:d.capex,fcf:d.fcf})), []);
@@ -731,7 +1084,157 @@ export default function App() {
   ══════════════════════════════════════ */
 
   /* ── COMPANY ── */
-  const CompanyTab = () => {
+  const NEWS_CATS = ["전체","FSD","로보택시","실적","Optimus","에너지","규제","머스크발언","주가"];
+const SENT_COLOR = {bullish:GR, bearish:R, neutral:MU};
+const IMPACT_LABEL = {5:"🔴 긴급", 4:"🟠 주목", 3:"🟡 참고", 2:"🔵 관심", 1:"⚪ 미미"};
+const CAT_COLOR = {
+  FSD:"rgba(56,189,248,.15)",로보택시:"rgba(16,185,129,.12)",실적:"rgba(251,191,36,.12)",
+  Optimus:"rgba(167,139,250,.12)",에너지:"rgba(16,185,129,.12)",규제:"rgba(239,68,68,.12)",
+  머스크발언:"rgba(251,191,36,.12)",주가:"rgba(56,189,248,.12)",기타:"rgba(148,163,184,.1)"
+};
+
+const NewsTab = () => {
+  const isMobile = useIsMobile();
+  const [expanded, setExpanded] = useState({});
+  const toggle = id => setExpanded(p => ({...p, [id]:!p[id]}));
+
+  const filteredNews = news.filter(n => {
+    const catOk  = newsFilter === "전체" || n.category === newsFilter;
+    const dateOk = newsDay === 0 || n.date === newsDates[newsDay];
+    return catOk && dateOk;
+  });
+
+  const todayCount  = news.filter(n => n.date === newsDates[0]).length;
+  const totalCount  = news.length;
+
+  return (
+    <div>
+      <SHdr sub="TESLA & MUSK NEWS" title="테슬라·머스크 뉴스" />
+
+      {/* 카테고리 필터 */}
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>
+        {NEWS_CATS.map(cat => (
+          <button key={cat} onClick={()=>setNewsFilter(cat)}
+            style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:newsFilter===cat?700:400,
+              padding:"4px 10px",borderRadius:20,border:"1px solid "+(newsFilter===cat?R:"var(--border)"),
+              background:newsFilter===cat?"rgba(227,25,55,.1)":"transparent",
+              color:newsFilter===cat?R:"var(--text-2)",cursor:"pointer"}}>
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* 날짜 필터 */}
+      <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:14,paddingBottom:2}}>
+        {["전체 기간", ...newsDates.slice(0,7)].map((d,i) => (
+          <button key={i} onClick={()=>setNewsDay(i===0?0:i-1)}
+            style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:newsDay===(i===0?0:i-1)?700:400,
+              padding:"4px 12px",borderRadius:20,border:"1px solid "+(newsDay===(i===0?0:i-1)?AC:"var(--border)"),
+              background:newsDay===(i===0?0:i-1)?"rgba(56,189,248,.1)":"transparent",
+              color:newsDay===(i===0?0:i-1)?AC:"var(--text-2)",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+            {i===0 ? "전체 기간" : (d===newsDates[0]?"오늘 "+d.slice(5):d.slice(5))}
+          </button>
+        ))}
+      </div>
+
+      {/* 로딩 */}
+      {newsLoading && (
+        <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-2)",fontFamily:"'Pretendard',sans-serif",fontSize:13}}>
+          <div style={{animation:"spin 1s linear infinite",display:"inline-block",marginRight:8}}>◌</div>
+          뉴스 수집 중...
+        </div>
+      )}
+
+      {/* 뉴스 없음 */}
+      {!newsLoading && filteredNews.length === 0 && (
+        <div style={{textAlign:"center",padding:"40px 0",color:"var(--text-2)",fontFamily:"'Pretendard',sans-serif",fontSize:13}}>
+          {newsMeta.error ? (
+            <>
+              <div style={{color:"#fb923c",marginBottom:6,fontWeight:600}}>⚠ 뉴스 서버 연결 실패</div>
+              <div style={{fontSize:11,color:"var(--text-3)"}}>{newsMeta.error}</div>
+            </>
+          ) : newsMeta.total === 0 ? (
+            <>
+              <div style={{color:AC,marginBottom:6,fontWeight:600}}>📡 수집된 뉴스 없음</div>
+              <div style={{fontSize:11,color:"var(--text-3)"}}>다음 갱신: 매일 09:00 / 16:00 KST</div>
+            </>
+          ) : (
+            <>해당 조건의 뉴스가 없습니다</>
+          )}
+        </div>
+      )}
+
+      {/* 뉴스 카드 목록 */}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {filteredNews.map(n => (
+          <div key={n.id} style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",
+            borderLeft:"3px solid "+(n.impact===5?R:n.impact===4?"#fb923c":n.impact===3?YL:"var(--border)")}}>
+            {/* 카드 헤더 */}
+            <div style={{padding:"12px 14px",cursor:"pointer"}} onClick={()=>toggle(n.id)}>
+              {/* 태그 행 */}
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7,alignItems:"center"}}>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,
+                  color:n.impact>=4?R:n.impact===3?YL:"var(--text-3)"}}>{IMPACT_LABEL[n.impact]||"⚪"}</span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:600,
+                  background:CAT_COLOR[n.category]||CAT_COLOR["기타"],
+                  color:"var(--text-1)",padding:"1px 7px",borderRadius:10}}>{n.category}</span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,
+                  color:SENT_COLOR[n.sentiment]||MU,fontWeight:600}}>
+                  {n.sentiment==="bullish"?"↑긍정":n.sentiment==="bearish"?"↓부정":"→중립"}
+                </span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)",marginLeft:"auto"}}>{n.source}</span>
+              </div>
+              {/* 제목 */}
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?13:14,fontWeight:700,
+                color:"var(--text-1)",lineHeight:1.4,marginBottom:6}}>{n.titleKo}</div>
+              {/* 요약 */}
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:"var(--text-2)",
+                lineHeight:1.7,
+                display:expanded[n.id]?"block":"-webkit-box",
+                WebkitLineClamp:expanded[n.id]?999:3,
+                WebkitBoxOrient:"vertical",
+                overflow:"hidden"}}>{n.summaryKo}</div>
+              {/* 펼치기 */}
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,marginTop:4,cursor:"pointer"}}>
+                {expanded[n.id]?"▲ 접기":"▼ 전문 보기"}
+              </div>
+            </div>
+            {/* 카드 푸터 */}
+            <div style={{padding:"6px 14px 8px",borderTop:"0.5px solid var(--border-subtle)",
+              display:"flex",justifyContent:"space-between",alignItems:"center",
+              background:"var(--card-overlay)"}}>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"var(--text-3)"}}>
+                {n.date} {n.collectedAt ? new Date(n.collectedAt).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" KST" : ""}
+              </span>
+              {n.sourceUrl && (
+                <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer"
+                  style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,textDecoration:"none",fontWeight:600}}>
+                  원문 보기 →
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 통계 */}
+      {!newsLoading && (
+        <div style={{textAlign:"center",padding:"16px 0",fontFamily:"'Pretendard',sans-serif",
+          fontSize:11,color:"var(--text-3)"}}>
+          {newsDay===0 ? `전체 ${totalCount}건` : `${newsDates[newsDay]} ${filteredNews.length}건`}
+          {" · 최근 30일 누적 · 매일 오전 9시·오후 4시 KST 업데이트"}
+          {newsMeta.updatedAt && (
+            <div style={{fontSize:10,color:"var(--text-3)",marginTop:4,opacity:.7,fontFamily:"'JetBrains Mono',monospace"}}>
+              서버 응답: {new Date(newsMeta.updatedAt).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})} KST
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const CompanyTab = () => {
     const priceStr   = "$"+stock.price.toFixed(2);
     const diffStr    = (priceDiff.up ? "▲" : "▼") + " $"+Math.abs(priceDiff.d) + " (" + (priceDiff.up?"+":"") + priceDiff.p + "%)";
     const highStr    = "52주 고점 $"+stock.high52w+" 대비 "+vsHigh+"%";
@@ -750,12 +1253,121 @@ export default function App() {
     return (
       <div>
         <SHdr sub="COMPANY INTELLIGENCE" title="Tesla, Inc. — 핵심 현황" />
-        <div style={{...card,background:"linear-gradient(135deg,rgba(227,25,55,.12),rgba(0,0,0,0) 60%)",marginBottom:20}}>
+
+        {/* 🆕 v3.2 - Robotaxi Austin Fleet (Overview 상단 KPI 그리드) */}
+        <div style={{...card, marginBottom:20, background:"linear-gradient(135deg,rgba(6,182,212,.06),rgba(0,0,0,0) 60%)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:12}}>
+            <div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:AC,letterSpacing:1,marginBottom:4}}>
+                🚕 ROBOTAXI FLEET · AUSTIN
+              </div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:15,fontWeight:700,color:"var(--text-1)"}}>
+                {roboLoading ? "로딩 중..." :
+                 roboLatest ? `테슬라 로보택시 플릿 현황` :
+                 "데이터 준비 중"}
+              </div>
+            </div>
+            {roboLatest && (
+              <div style={{textAlign:"right",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"var(--text-3)"}}>
+                <div>기준일: {roboLatest.date}</div>
+                <div style={{marginTop:2}}>
+                  갱신: {roboMeta.updatedAt ? new Date(roboMeta.updatedAt).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—"}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {roboLoading ? (
+            <div style={{textAlign:"center",padding:"30px 0",color:"var(--text-3)",fontSize:12,fontFamily:"'Pretendard',sans-serif"}}>
+              로보택시 데이터 로딩 중...
+            </div>
+          ) : roboMeta.error ? (
+            <div style={{textAlign:"center",padding:"30px 0",fontFamily:"'Pretendard',sans-serif"}}>
+              <div style={{color:"#fb923c",fontSize:13,fontWeight:600,marginBottom:6}}>⚠ 로보택시 데이터 서버 오류</div>
+              <div style={{fontSize:11,color:"var(--text-3)"}}>{roboMeta.error}</div>
+            </div>
+          ) : !roboLatest ? (
+            <div style={{textAlign:"center",padding:"30px 0",fontFamily:"'Pretendard',sans-serif"}}>
+              <div style={{color:AC,fontSize:13,fontWeight:600,marginBottom:6}}>📡 첫 수집 대기 중</div>
+              <div style={{fontSize:11,color:"var(--text-3)"}}>매일 KST 08:00 자동 갱신</div>
+            </div>
+          ) : (
+            <>
+              {/* KPI 그리드 6개 */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10,marginBottom:12}}>
+                <KPI label="Rider Vehicles"  value={roboLatest.riderVehicles ?? "—"} sub="30d active"      color={AC} />
+                <KPI label="Unsupervised"    value={roboLatest.unsupervised  ?? "—"} sub="30d active"      color={GR} />
+                <KPI label="Inactive"        value={roboLatest.inactive      ?? "—"} sub="30d unseen"      color={"#94a3b8"} />
+                <KPI label="Cybercabs"       value={roboLatest.cybercabs     ?? "—"} sub="test fleet"      color={"#a78bfa"} />
+                <KPI
+                  label="Unsup. Rate (7D)"
+                  value={roboLatest.unsupRate7D != null ? `${roboLatest.unsupRate7D}%` : "—"}
+                  sub={roboLatest.unsupRatio7D ? `${roboLatest.unsupRatio7D.num} of ${roboLatest.unsupRatio7D.den} rides` : "지난 7일"}
+                  color={R}
+                />
+                <KPI
+                  label="TxDMV 등록"
+                  value={roboLatest.txDmvRegistered != null ? `${roboLatest.txDmvRegistered}대` : "—"}
+                  sub="텍사스 차량국 공식"
+                  color={"#f59e0b"}
+                />
+              </div>
+
+              {/* Unsupervised 추이 미니 차트 (2일 이상 데이터 있을 때만) */}
+              {roboHistory.length >= 2 && (
+                <div style={{marginTop:8,padding:"10px 6px 6px",background:"rgba(0,0,0,.15)",borderRadius:8}}>
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"var(--text-3)",letterSpacing:1,marginBottom:4,paddingLeft:6}}>
+                    UNSUPERVISED VEHICLES · {roboHistory.length}일 추이
+                  </div>
+                  <ResponsiveContainer width="100%" height={80}>
+                    <LineChart data={roboHistory} margin={{top:5,right:10,left:0,bottom:0}}>
+                      <XAxis
+                        dataKey="date"
+                        tick={{fontSize:9,fill:"var(--text-3)",fontFamily:"'JetBrains Mono',monospace"}}
+                        tickFormatter={(d)=> d ? d.slice(5) : ""}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{fontSize:9,fill:"var(--text-3)",fontFamily:"'JetBrains Mono',monospace"}}
+                        axisLine={false}
+                        tickLine={false}
+                        width={28}
+                      />
+                      <Tooltip
+                        contentStyle={{background:"rgba(15,23,42,.95)",border:"1px solid rgba(255,255,255,.1)",borderRadius:6,fontSize:11,fontFamily:"'Pretendard',sans-serif"}}
+                        labelStyle={{color:"var(--text-2)",fontSize:10}}
+                        formatter={(v)=>[v,"Unsupervised"]}
+                      />
+                      <Line type="monotone" dataKey="unsupervised" stroke={GR} strokeWidth={2} dot={{r:2,fill:GR}} activeDot={{r:4}} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* 출처 표기 */}
+              <div style={{marginTop:10,paddingTop:8,borderTop:"1px solid rgba(255,255,255,.05)",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:4,fontSize:10,color:"var(--text-3)",fontFamily:"'Pretendard',sans-serif"}}>
+                <div>
+                  출처:{" "}
+                  <a href="https://robotaxitracker.com/?provider=tesla&area=austin" target="_blank" rel="noopener noreferrer" style={{color:AC,textDecoration:"none"}}>
+                    robotaxitracker.com
+                  </a>
+                  {" · by Ethan McKanna (@ethanmckanna)"}
+                </div>
+                <div style={{fontFamily:"'JetBrains Mono',monospace"}}>
+                  매일 KST 08:00 자동 갱신
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{...card,background:"linear-gradient(135deg,rgba(227,25,55,.08),rgba(0,0,0,0) 60%)",marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:16}}>
             <div>
               <div style={lbl}>{"TICKER · NASDAQ · "+stock.date+" 종가"}</div>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:44,fontWeight:900,color:"#fff",lineHeight:1}}>TSLA</div>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,color:R,marginTop:6}}>{priceStr}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:32,fontWeight:800,color:"var(--text-1)",lineHeight:1,letterSpacing:-1}}>TSLA</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:20,color:R,marginTop:6}}>{priceStr}</div>
               <div style={{fontSize:11,color:MU,marginTop:4}}>{diffStr + " · " + highStr}</div>
               <div style={{fontSize:12,color:MU,marginTop:10,maxWidth:520,lineHeight:1.7}}>
                 전기차 → <strong style={{color:TX}}>물리적 AI 기업</strong>으로 전환 완료 선언.<br/>
@@ -763,14 +1375,14 @@ export default function App() {
                 <strong style={{color:YL}}>2026: Model S·X 단종 → Fremont Optimus 전환 + Terafab 착공</strong>
               </div>
             </div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:72,fontWeight:900,color:"rgba(227,25,55,.07)",userSelect:"none",lineHeight:1}}>TSLA</div>
           </div>
         </div>
 
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:20}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:20}}>
           <KPI label="시가총액"         value={mktCap}     sub={stock.date+" 종가 기준"} color={R} />
           <KPI label="2025 연간매출"    value="$94.8B"     sub="YoY -3%" />
           <KPI label="Q1'26 EPS"       value="$0.41"      sub="컨센 +17%" color={GR} />
+          <KPI label="다음 실적 발표"   value="7/22"        sub="Q2'26 컨센 EPS $0.45" color={AC} />
           <KPI label="자동차 총이익률"  value="21.1%"      sub="5분기 최고" color={AC} />
           <KPI label="FSD 구독자"       value="128만명"    sub="+51% YoY" color={YL} />
           <KPI label="FSD ARR"          value="$5.46억"    sub="연간 반복매출" color={GR} badge="NEW" />
@@ -780,9 +1392,9 @@ export default function App() {
         </div>
 
         {/* 2026 전략 피벗 */}
-        <div style={{...card,marginBottom:16,borderColor:"rgba(255,214,0,.35)",background:"rgba(255,214,0,.04)"}}>
+        <div style={{...card,marginBottom:16,borderColor:"rgba(251,191,36,.35)",background:"rgba(251,191,36,.08)"}}>
           <div style={{...lbl,color:YL}}>2026 STRATEGIC PIVOT — 핵심 이벤트</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:12}}>
             {[
               ["🔴 Model S·X 단종","Q2'26 생산 종료. Fremont → Optimus 100만대/년 전환.",R],
               ["🔵 Terafab 착공","Giga Texas $3B 반도체 R&D 팹. Intel 14A. 2026.04.22 착공.",AC],
@@ -790,14 +1402,14 @@ export default function App() {
               ["🟢 Robotaxi 확장","달라스·휴스턴 무사고 운행. FSD v14.3.3 출시.",GR],
             ].map(([t,d,c],i) => (
               <div key={i} style={{background:c+"0d",border:"1px solid "+c+"30",borderRadius:3,padding:"12px 14px"}}>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,color:c,marginBottom:6}}>{t}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:c,marginBottom:6}}>{t}</div>
                 <div style={{fontSize:11,color:MU,lineHeight:1.65}}>{d}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14}}>
           <div style={card}>
             <div style={lbl}>{"사업 세그먼트 ("+latestAnnual.y+" 실적 자동 연동)"}</div>
             {segItems.map((seg,i) => {
@@ -807,11 +1419,11 @@ export default function App() {
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
                     <span style={{color:MU}}>{seg.n}</span>
                     <span style={{display:"flex",gap:8}}>
-                      <span style={{fontFamily:"'Space Mono',monospace",color:TX}}>{"$"+(seg.v/1000).toFixed(1)+"B"}</span>
-                      <span style={{fontFamily:"'Space Mono',monospace",color:Number(seg.yoy)>=0?GR:R,fontSize:10}}>{"YoY "+(Number(seg.yoy)>=0?"+":"")+seg.yoy+"%"}</span>
+                      <span style={{fontFamily:"'Pretendard',sans-serif",color:TX}}>{"$"+(seg.v/1000).toFixed(1)+"B"}</span>
+                      <span style={{fontFamily:"'Pretendard',sans-serif",color:Number(seg.yoy)>=0?GR:R,fontSize:10}}>{"YoY "+(Number(seg.yoy)>=0?"+":"")+seg.yoy+"%"}</span>
                     </span>
                   </div>
-                  <div style={{height:5,background:"rgba(255,255,255,.06)",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{height:5,background:"var(--border-subtle)",borderRadius:3,overflow:"hidden"}}>
                     <div style={{height:"100%",width:pct+"%",background:seg.c,borderRadius:3}} />
                   </div>
                 </div>
@@ -830,8 +1442,8 @@ export default function App() {
               ["Cybercab","Pilot Production 중 🟡"],
             ].map(([l,r],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
-                <span style={{color:l.startsWith(" ")?"#5a5a7a":MU}}>{l}</span>
-                <span style={{fontFamily:"'Space Mono',monospace",color:TX,fontSize:9}}>{r}</span>
+                <span style={{color:l.startsWith(" ")?"var(--text-3)":MU}}>{l}</span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",color:TX,fontSize:12}}>{r}</span>
               </div>
             ))}
           </div>
@@ -844,36 +1456,36 @@ export default function App() {
   const CeoTab = () => (
     <div>
       <SHdr sub="LEADERSHIP PROFILE" title="일론 머스크 — 생애와 걸어온 길" />
-      <div style={{display:"grid",gridTemplateColumns:"300px 1fr",gap:20}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"300px 1fr",gap:20}}>
         <div>
           <div style={{...card,textAlign:"center",marginBottom:14}}>
-            <div style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,"+R+",#7b0016)",margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Orbitron',monospace",fontSize:22,fontWeight:900,color:"#fff",border:"3px solid "+R,boxShadow:"0 0 18px rgba(227,25,55,.4)"}}>EM</div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:15,fontWeight:700,color:"#fff",marginBottom:2}}>Elon Reeve Musk</div>
-            <div style={{fontSize:10,color:R,letterSpacing:2,marginBottom:12}}>CHAIRMAN & CEO · TESLA</div>
-            {[["출생","1971.06.28 (만 54세)"],["학력","UPenn 경제·물리학"],["CEO 취임","2008.10~ (현재)"],["순자산","~$834B (2026.06)"],["국적","미국·캐나다·남아공"]].map(([k,v],i) => (
+            <div style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,"+R+",#7b0016)",margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Pretendard',sans-serif",fontSize:22,fontWeight:900,color:"var(--text-1)",border:"3px solid "+R,boxShadow:"0 0 18px rgba(227,25,55,.4)"}}>EM</div>
+            <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:15,fontWeight:700,color:"var(--text-1)",marginBottom:2}}>Elon Reeve Musk</div>
+            <div style={{fontSize:10,color:R,letterSpacing:0.5,marginBottom:12}}>CHAIRMAN & CEO · TESLA</div>
+            {[["출생","1971.06.28 (만 55세 🎂 오늘!)"],["학력","UPenn 경제·물리학"],["CEO 취임","2008.10~ (현재)"],["순자산","~$1.07~1.2조 (2026.06)"],["국적","미국·캐나다·남아공"]].map(([k,v],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
-                <span style={{color:MU}}>{k}</span><span style={{fontFamily:"'Space Mono',monospace",color:TX}}>{v}</span>
+                <span style={{color:MU}}>{k}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:TX}}>{v}</span>
               </div>
             ))}
           </div>
           <div style={{...card,marginBottom:14}}>
             <div style={lbl}>보유 기업</div>
-            {[["Tesla","~13%",R],["SpaceX","~42%",AC],["X","최대주주",MU],["xAI","창업자",YL],["Neuralink","공동창업자",MU],["The Boring Co.","창업자",MU]].map(([n,v,c],i) => (
+            {[["Tesla","~20% (19.9%)",R],["SpaceX (SPCX)","~42% (SPCX)",AC],["X","최대주주 (xAI에 포함)",MU],["xAI","SpaceX에 합병",YL],["Neuralink","공동창업자·CEO",MU],["The Boring Co.","창업자·CEO",MU]].map(([n,v,c],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:12}}>
-                <span style={{color:MU}}>{n}</span><span style={{fontFamily:"'Space Mono',monospace",color:c,fontSize:10}}>{v}</span>
+                <span style={{color:MU}}>{n}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:c,fontSize:10}}>{v}</span>
               </div>
             ))}
           </div>
-          <div style={{...card,borderColor:"rgba(255,214,0,.3)"}}>
+          <div style={{...card,borderColor:"rgba(251,191,36,.3)"}}>
             <div style={{...lbl,color:YL}}>CEO 보상 마일스톤</div>
-            <div style={{fontSize:9,color:MU,marginBottom:10,lineHeight:1.5}}>머스크 보상패키지 조건 달성 현황</div>
+            <div style={{fontSize:12,color:MU,marginBottom:10,lineHeight:1.5}}>머스크 보상패키지 조건 달성 현황</div>
             {CEO_MILESTONES.map((m,i) => (
               <div key={i} style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:4}}>
                   <span style={{color:MU}}>{i+1+". "+m.n}</span>
-                  <span style={{fontFamily:"'Space Mono',monospace",color:YL,fontSize:9}}>{m.cur}</span>
+                  <span style={{fontFamily:"'Pretendard',sans-serif",color:YL,fontSize:12}}>{m.cur}</span>
                 </div>
-                <div style={{height:4,background:"rgba(255,255,255,.06)",borderRadius:2,overflow:"hidden"}}>
+                <div style={{height:4,background:"var(--border-subtle)",borderRadius:2,overflow:"hidden"}}>
                   <div style={{height:"100%",width:m.pct+"%",background:YL,borderRadius:2}} />
                 </div>
               </div>
@@ -887,7 +1499,7 @@ export default function App() {
             {CEO_TL.map((t,i) => (
               <div key={i} style={{position:"relative",marginBottom:20}}>
                 <div style={{position:"absolute",left:-22,top:4,width:10,height:10,borderRadius:"50%",background:R,border:"2px solid "+DK,boxShadow:"0 0 7px rgba(227,25,55,.5)"}} />
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:10,fontWeight:700,color:R,letterSpacing:2,marginBottom:2}}>{t.y}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:R,letterSpacing:0.5,marginBottom:2}}>{t.y}</div>
                 <div style={{fontSize:13,fontWeight:700,color:TX,marginBottom:2}}>{t.t}</div>
                 <div style={{fontSize:11,color:MU,lineHeight:1.6}}>{t.d}</div>
               </div>
@@ -902,23 +1514,23 @@ export default function App() {
   const ValuesTab = () => (
     <div>
       <SHdr sub="PHILOSOPHY & PRINCIPLES" title="가치관과 사상 체계" />
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:12,marginBottom:20}}>
         {VALUES.map((v,i) => (
           <div key={i} style={card}>
             <div style={{fontSize:24,marginBottom:8}}>{v.icon}</div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,fontWeight:700,color:R,marginBottom:6}}>{v.t}</div>
+            <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:R,marginBottom:6}}>{v.t}</div>
             <div style={{fontSize:11,color:MU,lineHeight:1.65}}>{v.d}</div>
           </div>
         ))}
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:16}}>
         <div>
           {[["제1원칙","나는 제1원칙에서 추론하는 것이 중요하다고 생각한다. 근본적 진실을 찾아내고 그로부터 추론하는 것이다."],
             ["사명","어떤 것이 충분히 중요하다면, 승산이 없더라도 해야 한다."],
             ["혁신","실패가 없으면 혁신도 없다."],
             ["인간 잠재력","평범한 사람도 비범함을 선택할 수 있다."]].map(([k,q],i) => (
-            <div key={i} style={{background:"rgba(227,25,55,.05)",borderLeft:"3px solid rgba(227,25,55,.4)",borderRadius:"0 4px 4px 0",padding:"12px 16px",marginBottom:10}}>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:R,letterSpacing:2,marginBottom:5}}>{k}</div>
+            <div key={i} style={{background:"var(--red-tint)",borderLeft:"3px solid rgba(227,25,55,.4)",borderRadius:"0 4px 4px 0",padding:"12px 16px",marginBottom:10}}>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:R,letterSpacing:0.5,marginBottom:5}}>{k}</div>
               <div style={{fontSize:12,color:TX,lineHeight:1.7,fontStyle:"italic"}}>{"\""+q+"\""}</div>
             </div>
           ))}
@@ -928,9 +1540,9 @@ export default function App() {
           {[["비전 제시력",98,R],["기술 전문성",92,AC],["리스크 감내력",97,R],["실행 속도",95,GR],["직원 관리 유연성",45,YL],["대중 소통",88,AC]].map(([l,p,c],i) => (
             <div key={i} style={{marginTop:12}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4}}>
-                <span style={{color:MU}}>{l}</span><span style={{color:TX,fontFamily:"'Space Mono',monospace"}}>{p+"%"}</span>
+                <span style={{color:MU}}>{l}</span><span style={{color:TX,fontFamily:"'Pretendard',sans-serif"}}>{p+"%"}</span>
               </div>
-              <div style={{height:5,background:"rgba(255,255,255,.06)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:5,background:"var(--border-subtle)",borderRadius:3,overflow:"hidden"}}>
                 <div style={{height:"100%",width:p+"%",background:c,borderRadius:3}} />
               </div>
             </div>
@@ -947,24 +1559,25 @@ export default function App() {
       <div>
         <SHdr sub="FINANCIAL INTELLIGENCE" title="실적 분석">
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <AIBtn onUpdate={() => guard(updatePerf)} loading={ld.perf} label="최신 분기 업데이트" />
+
             <LogBadge log={logs.perf} />
           </div>
         </SHdr>
         {/* 서브탭 */}
-        <div style={{display:"flex",gap:0,borderBottom:"1px solid "+BD,marginBottom:18}}>
-          {[["quarterly","📊 분기별"],["annual","📈 연간"],["rd","🔬 R&D & CapEx"],["fsd_data","📡 FSD 지표"]].map(([v,l]) => (
+        <div style={{display:"flex",gap:0,borderBottom:"1px solid rgba(255,255,255,0.07)",marginBottom:18,overflowX:"auto",scrollbarWidth:"none"}}>
+          {[["quarterly","분기별"],["annual","연간"],["rd","R&D·CapEx"],["fsd_data","FSD"]].map(([v,l]) => (
             <button key={v} onClick={() => setPerfSub(v)}
-              style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:1,padding:"9px 16px",border:"none",
+              style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?11:13,fontWeight:perfSub===v?700:400,
+                letterSpacing:0,padding:isMobile?"10px 12px":"11px 18px",border:"none",whiteSpace:"nowrap",flexShrink:0,
                 borderBottom:"2px solid "+(perfSub===v?R:"transparent"),
                 background:perfSub===v?"rgba(227,25,55,.07)":"transparent",
-                color:perfSub===v?R:MU,cursor:"pointer"}}>{l}</button>
+                color:perfSub===v?"var(--text-1)":MU,cursor:"pointer"}}>{l}</button>
           ))}
         </div>
 
         {perfSub === "quarterly" && (
           <div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:16}}>
               <KPI label="Q1'26 총 매출" value="$22.4B" sub="YoY +16%" />
               <KPI label="자동차" value="$16.2B" sub="+16%" color={R} />
               <KPI label="에너지" value="$2.4B" sub="-12%" color={AC} />
@@ -975,11 +1588,11 @@ export default function App() {
               <KPI label="FCF" value="$1.44B" sub="음전환 예고" color={YL} />
             </div>
             {/* CapEx 경고 배너 */}
-            <div style={{...card,marginBottom:14,borderColor:"rgba(227,25,55,.5)",background:"rgba(227,25,55,.06)"}}>
+            <div style={{...card,marginBottom:14,borderColor:"rgba(227,25,55,.5)",background:"var(--red-tint)"}}>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
                 <div style={{fontSize:22}}>⚠️</div>
                 <div>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:R,letterSpacing:2,marginBottom:3}}>2026 CAPEX SHOCK</div>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:R,letterSpacing:0.5,marginBottom:3}}>2026 CAPEX SHOCK</div>
                   <div style={{fontSize:12,color:TX,lineHeight:1.6}}>
                     2026년 CapEx 가이던스 <strong style={{color:R}}>$25B+</strong> (기존 $20B 대비 25% 상향, 2025년의 3배).
                     <strong style={{color:YL}}> FCF 음전환 예고</strong> — "몇 년간 지속될 대규모 투자 단계" (머스크)
@@ -988,7 +1601,7 @@ export default function App() {
               </div>
             </div>
             <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
-              <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,alignSelf:"center",letterSpacing:2}}>FILTER:</span>
+              <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,alignSelf:"center",letterSpacing:0.5}}>FILTER:</span>
               {YR_OPTS.map(y => <button key={y} style={fb(yearFil===y)} onClick={() => setYearFil(y)}>{y}</button>)}
             </div>
             <div style={{display:"flex",gap:6,marginBottom:12}}>
@@ -1000,15 +1613,15 @@ export default function App() {
               {perfView === "revenue" && (
                 <>
                   <div style={lbl}>분기별 사업부문 매출 ($M)</div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:220}>
                     <BarChart data={filtQ} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="q" tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} />
-                      <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="q" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} />
+                      <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
                       <Tooltip content={<RevTip />} />
-                      <Legend wrapperStyle={{fontFamily:"'Space Mono',monospace",fontSize:9}} />
-                      <Bar dataKey="auto"     name="자동차"     stackId="a" fill={R} />
-                      <Bar dataKey="energy"   name="에너지"     stackId="a" fill={AC} />
+                      <Legend wrapperStyle={{fontFamily:"'Pretendard',sans-serif",fontSize:12}} />
+                      <Bar dataKey="auto"     name="자동차"     stackId="a" fill={R}  isAnimationActive={false}/>
+                      <Bar dataKey="energy"   name="에너지"     stackId="a" fill={AC}  isAnimationActive={false}/>
                       <Bar dataKey="services" name="서비스/FSD" stackId="a" fill={GR} radius={[2,2,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1017,14 +1630,14 @@ export default function App() {
               {perfView === "margin" && (
                 <>
                   <div style={lbl}>총이익률 추이 (%)</div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:220}>
                     <LineChart data={filtQ.filter(d => d.gm)} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="q" tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} />
-                      <YAxis domain={[10,35]} tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => v+"%"} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="q" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} />
+                      <YAxis domain={[10,35]} tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => v+"%"} />
                       <Tooltip formatter={v => [v+"%","총이익률"]} />
-                      <ReferenceLine y={18} stroke="rgba(255,214,0,.3)" strokeDasharray="4 4" />
-                      <Line dataKey="gm" stroke={R} dot={{r:2}} strokeWidth={2} />
+                      <ReferenceLine y={18} stroke="rgba(251,191,36,.3)" strokeDasharray="4 4" />
+                      <Line dataKey="gm" stroke={R} dot={{r:2}} strokeWidth={2}  isAnimationActive={false}/>
                     </LineChart>
                   </ResponsiveContainer>
                 </>
@@ -1032,14 +1645,14 @@ export default function App() {
               {perfView === "income" && (
                 <>
                   <div style={lbl}>영업이익 추이 ($M)</div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:220}>
                     <BarChart data={filtQ.filter(d => d.opInc != null)} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="q" tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} />
-                      <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(1)+"B"} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="q" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} />
+                      <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(1)+"B"} />
                       <Tooltip content={<RevTip />} />
-                      <ReferenceLine y={0} stroke="rgba(255,255,255,.3)" />
-                      <Bar dataKey="opInc" name="영업이익" fill={R} radius={[2,2,0,0]} />
+                      <ReferenceLine y={0} stroke="var(--border)" />
+                      <Bar dataKey="opInc" name="영업이익" fill={R} radius={[2,2,0,0]}  isAnimationActive={false}/>
                     </BarChart>
                   </ResponsiveContainer>
                 </>
@@ -1048,8 +1661,8 @@ export default function App() {
             {/* 데이터 테이블 */}
             <div style={card}>
               <div style={lbl}>{"전체 분기 데이터 ("+quarterly.length+"개 분기) — R&D·CapEx 포함"}</div>
-              <div style={{overflowX:"auto",marginTop:10}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"'Space Mono',monospace",fontSize:9}}>
+              <div style={{overflowX:"auto",marginTop:10,WebkitOverflowScrolling:"touch",position:"relative"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"'Pretendard',sans-serif",fontSize:12}}>
                   <thead>
                     <tr style={{borderBottom:"1px solid rgba(227,25,55,.3)"}}>
                       {["분기","총매출","자동차","에너지","서비스","총이익률","영업이익","EPS","FCF","R&D","CapEx"].map(h => (
@@ -1059,14 +1672,14 @@ export default function App() {
                   </thead>
                   <tbody>
                     {[...filtQ].reverse().map((d,i) => (
-                      <tr key={d.q} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"rgba(255,255,255,.015)":"transparent"}}>
+                      <tr key={d.q} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"var(--card-overlay)":"transparent"}}>
                         <td style={{padding:"5px 8px",color:R,letterSpacing:1}}>{d.q}</td>
                         <td style={{padding:"5px 8px",textAlign:"right"}}>{d.total.toLocaleString()}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:R}}>{d.auto.toLocaleString()}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:AC}}>{d.energy.toLocaleString()}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:GR}}>{d.services.toLocaleString()}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:d.gm>=20?GR:d.gm>=17?YL:R}}>{d.gm != null ? d.gm+"%" : "—"}</td>
-                        <td style={{padding:"5px 8px",textAlign:"right",color:d.opInc>0?"#fff":"#ff6b6b"}}>{d.opInc != null ? d.opInc.toLocaleString() : "—"}</td>
+                        <td style={{padding:"5px 8px",textAlign:"right",color:d.opInc>0?"var(--text-1)":"#ff6b6b"}}>{d.opInc != null ? d.opInc.toLocaleString() : "—"}</td>
                         <td style={{padding:"5px 8px",textAlign:"right"}}>{d.eps != null ? "$"+d.eps : "—"}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:d.fcf>0?GR:d.fcf<0?"#ff6b6b":MU}}>{d.fcf != null ? d.fcf.toLocaleString() : "—"}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:AC}}>{d.rd != null ? d.rd.toLocaleString() : "—"}</td>
@@ -1091,14 +1704,14 @@ export default function App() {
               {annV === "revenue" && (
                 <>
                   <div style={lbl}>연간 사업부문별 매출</div>
-                  <ResponsiveContainer width="100%" height={240}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:240}>
                     <BarChart data={ANNUAL} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="y" tick={{fontFamily:"'Space Mono',monospace",fontSize:10,fill:MU}} />
-                      <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
-                      <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Space Mono',monospace",fontSize:9}} />
-                      <Bar dataKey="auto"     name="자동차"     stackId="a" fill={R} />
-                      <Bar dataKey="energy"   name="에너지"     stackId="a" fill={AC} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="y" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fill:MU}} />
+                      <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
+                      <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Pretendard',sans-serif",fontSize:12}} />
+                      <Bar dataKey="auto"     name="자동차"     stackId="a" fill={R}  isAnimationActive={false}/>
+                      <Bar dataKey="energy"   name="에너지"     stackId="a" fill={AC}  isAnimationActive={false}/>
                       <Bar dataKey="services" name="서비스/FSD" stackId="a" fill={GR} radius={[2,2,0,0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1107,13 +1720,13 @@ export default function App() {
               {annV === "margin" && (
                 <>
                   <div style={lbl}>연간 총이익률</div>
-                  <ResponsiveContainer width="100%" height={240}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:240}>
                     <LineChart data={ANNUAL} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="y" tick={{fontFamily:"'Space Mono',monospace",fontSize:10,fill:MU}} />
-                      <YAxis domain={[10,30]} tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => v+"%"} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="y" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fill:MU}} />
+                      <YAxis domain={[10,30]} tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => v+"%"} />
                       <Tooltip formatter={v => [v+"%","총이익률"]} />
-                      <Line dataKey="gm" stroke={R} dot={{r:5,fill:R}} strokeWidth={3} />
+                      <Line dataKey="gm" stroke={R} dot={{r:5,fill:R}} strokeWidth={3}  isAnimationActive={false}/>
                     </LineChart>
                   </ResponsiveContainer>
                 </>
@@ -1121,15 +1734,15 @@ export default function App() {
               {annV === "income" && (
                 <>
                   <div style={lbl}>연간 영업이익 & 순이익</div>
-                  <ResponsiveContainer width="100%" height={240}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:240}>
                     <BarChart data={ANNUAL} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="y" tick={{fontFamily:"'Space Mono',monospace",fontSize:10,fill:MU}} />
-                      <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
-                      <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Space Mono',monospace",fontSize:9}} />
-                      <ReferenceLine y={0} stroke="rgba(255,255,255,.3)" />
-                      <Bar dataKey="opInc"  name="영업이익" fill={R}  radius={[2,2,0,0]} />
-                      <Bar dataKey="netInc" name="순이익"   fill={AC} radius={[2,2,0,0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="y" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fill:MU}} />
+                      <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
+                      <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Pretendard',sans-serif",fontSize:12}} />
+                      <ReferenceLine y={0} stroke="var(--border)" />
+                      <Bar dataKey="opInc"  name="영업이익" fill={R}  radius={[2,2,0,0]}  isAnimationActive={false}/>
+                      <Bar dataKey="netInc" name="순이익"   fill={AC} radius={[2,2,0,0]}  isAnimationActive={false}/>
                     </BarChart>
                   </ResponsiveContainer>
                 </>
@@ -1137,15 +1750,15 @@ export default function App() {
               {annV === "rd_capex" && (
                 <>
                   <div style={lbl}>연간 R&D & CapEx ($M)</div>
-                  <ResponsiveContainer width="100%" height={240}>
+                  <ResponsiveContainer width="100%" height={isMobile?160:240}>
                     <ComposedChart data={ANNUAL} margin={{top:6,right:10,left:0,bottom:0}}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                      <XAxis dataKey="y" tick={{fontFamily:"'Space Mono',monospace",fontSize:10,fill:MU}} />
-                      <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
-                      <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Space Mono',monospace",fontSize:9}} />
-                      <Bar dataKey="rd"    name="R&D"    fill={AC}       opacity={0.85} />
-                      <Bar dataKey="capex" name="CapEx"  fill="#a78bfa"  opacity={0.85} />
-                      <Line dataKey="opInc" name="영업이익" stroke={R} dot={false} strokeWidth={2} strokeDasharray="5 3" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                      <XAxis dataKey="y" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fill:MU}} />
+                      <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(0)+"B"} />
+                      <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Pretendard',sans-serif",fontSize:12}} />
+                      <Bar dataKey="rd"    name="R&D"    fill={AC}       opacity={0.85}  isAnimationActive={false}/>
+                      <Bar dataKey="capex" name="CapEx"  fill="#a78bfa"  opacity={0.85}  isAnimationActive={false}/>
+                      <Line dataKey="opInc" name="영업이익" stroke={R} dot={false} strokeWidth={2} strokeDasharray="5 3"  isAnimationActive={false}/>
                     </ComposedChart>
                   </ResponsiveContainer>
                 </>
@@ -1153,8 +1766,8 @@ export default function App() {
             </div>
             <div style={card}>
               <div style={lbl}>연간 요약 테이블 (R&D·CapEx 포함)</div>
-              <div style={{overflowX:"auto",marginTop:10}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"'Space Mono',monospace",fontSize:9}}>
+              <div style={{overflowX:"auto",marginTop:10,WebkitOverflowScrolling:"touch",position:"relative"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"'Pretendard',sans-serif",fontSize:12}}>
                   <thead>
                     <tr style={{borderBottom:"1px solid rgba(227,25,55,.3)"}}>
                       {["연도","총매출","자동차","에너지","서비스","총이익률","영업이익","순이익","R&D","CapEx"].map(h => (
@@ -1164,14 +1777,14 @@ export default function App() {
                   </thead>
                   <tbody>
                     {[...ANNUAL].reverse().map((d,i) => (
-                      <tr key={d.y} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"rgba(255,255,255,.015)":"transparent"}}>
+                      <tr key={d.y} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"var(--card-overlay)":"transparent"}}>
                         <td style={{padding:"7px 10px",color:R,fontWeight:700}}>{d.y}</td>
                         <td style={{padding:"7px 10px",textAlign:"right"}}>{"$"+(d.total/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right",color:R}}>{"$"+(d.auto/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right",color:AC}}>{"$"+(d.energy/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right",color:GR}}>{"$"+(d.services/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right",color:d.gm>=22?GR:d.gm>=18?YL:R}}>{d.gm+"%"}</td>
-                        <td style={{padding:"7px 10px",textAlign:"right",color:d.opInc>0?"#fff":"#ff6b6b"}}>{"$"+(d.opInc/1000).toFixed(1)+"B"}</td>
+                        <td style={{padding:"7px 10px",textAlign:"right",color:d.opInc>0?"var(--text-1)":"#ff6b6b"}}>{"$"+(d.opInc/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right"}}>{"$"+(d.netInc/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right",color:AC}}>{"$"+(d.rd/1000).toFixed(1)+"B"}</td>
                         <td style={{padding:"7px 10px",textAlign:"right",color:"#a78bfa"}}>{"$"+(d.capex/1000).toFixed(1)+"B"}</td>
@@ -1186,7 +1799,7 @@ export default function App() {
 
         {perfSub === "rd" && (
           <div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:16}}>
               <KPI label="Q1'26 R&D"           value="$1.95B" sub="매출 9% · YoY +38%" color={AC} badge="NEW" />
               <KPI label="2025 연간 R&D"        value="$6.74B" sub="YoY +46%"            color={AC} />
               <KPI label="Q1'26 CapEx"          value="$2.49B" sub="YoY +67%"            color="#a78bfa" badge="↑" />
@@ -1194,10 +1807,10 @@ export default function App() {
               <KPI label="Terafab 투자액"        value="$3B"    sub="Giga Texas 반도체 팹" color={YL} badge="NEW" />
               <KPI label="FCF Q1'26"             value="$1.44B" sub="음전환 예고"         color={YL} />
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
               <div style={card}>
                 <div style={lbl}>분기별 R&D 지출 추이 ($M)</div>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={isMobile?150:200}>
                   <AreaChart data={BASE_Q.filter(d => d.rd).slice(-12)} margin={{top:6,right:8,left:0,bottom:0}}>
                     <defs>
                       <linearGradient id="rdg" x1="0" y1="0" x2="0" y2="1">
@@ -1205,33 +1818,33 @@ export default function App() {
                         <stop offset="95%" stopColor={AC} stopOpacity={0}  />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                    <XAxis dataKey="q" tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} />
-                    <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(1)+"B"} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                    <XAxis dataKey="q" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} />
+                    <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(1)+"B"} />
                     <Tooltip formatter={v => ["$"+v+"M","R&D"]} />
-                    <Area dataKey="rd" stroke={AC} fill="url(#rdg)" strokeWidth={2} />
+                    <Area dataKey="rd" stroke={AC} fill="url(#rdg)" strokeWidth={2}  isAnimationActive={false}/>
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
               <div style={card}>
                 <div style={lbl}>CapEx vs FCF (최근 8분기, $M)</div>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={isMobile?150:200}>
                   <ComposedChart data={capexFcfData} margin={{top:6,right:8,left:0,bottom:0}}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                    <XAxis dataKey="q" tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} />
-                    <YAxis tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(1)+"B"} />
-                    <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Space Mono',monospace",fontSize:9}} />
-                    <ReferenceLine y={0} stroke="rgba(255,255,255,.3)" />
-                    <Bar dataKey="capex" name="CapEx" fill="#a78bfa" opacity={0.85} />
-                    <Line dataKey="fcf" name="FCF" stroke={GR} dot={{r:3}} strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                    <XAxis dataKey="q" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} />
+                    <YAxis tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => "$"+(v/1000).toFixed(1)+"B"} />
+                    <Tooltip content={<RevTip />} /><Legend wrapperStyle={{fontFamily:"'Pretendard',sans-serif",fontSize:12}} />
+                    <ReferenceLine y={0} stroke="var(--border)" />
+                    <Bar dataKey="capex" name="CapEx" fill="#a78bfa" opacity={0.85}  isAnimationActive={false}/>
+                    <Line dataKey="fcf" name="FCF" stroke={GR} dot={{r:3}} strokeWidth={2}  isAnimationActive={false}/>
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
             {/* Terafab 상세 */}
-            <div style={{...card,borderColor:"rgba(255,214,0,.35)",background:"rgba(255,214,0,.04)"}}>
+            <div style={{...card,borderColor:"rgba(251,191,36,.35)",background:"rgba(251,191,36,.08)"}}>
               <div style={{...lbl,color:YL}}>TERAFAB — 테슬라 반도체 R&D 팹</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginTop:12}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14,marginTop:12}}>
                 {[
                   ["📍 위치","Giga Texas (오스틴)","착공 2026.04.22"],
                   ["💰 투자","Tesla 단독 $3B","전체 프로젝트: $55B~$119B"],
@@ -1240,8 +1853,8 @@ export default function App() {
                   ["🎯 목적","AI5 칩·FSD HW 자체조달","AI 컴퓨팅 독립"],
                   ["📅 전략","15년 장기 프로젝트","고용 유지·증가"],
                 ].map(([icon,main,sub],i) => (
-                  <div key={i} style={{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.08)",borderRadius:3,padding:"12px 14px"}}>
-                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:YL,marginBottom:6}}>{icon}</div>
+                  <div key={i} style={{background:"var(--card-overlay)",border:"1px solid rgba(255,255,255,.08)",borderRadius:3,padding:"12px 14px"}}>
+                    <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:YL,marginBottom:6}}>{icon}</div>
                     <div style={{fontSize:12,fontWeight:700,color:TX,marginBottom:4}}>{main}</div>
                     <div style={{fontSize:10,color:MU,lineHeight:1.5}}>{sub}</div>
                   </div>
@@ -1256,11 +1869,11 @@ export default function App() {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
               <div style={{...lbl,marginBottom:0}}>{"마지막 업데이트: "+fsdMiles.updatedDate+" · 출처: tesla.com/VehicleSafetyReport"}</div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <AIBtn onUpdate={()=>guard(updateFsd)} loading={ldFsd} label="FSD 마일 업데이트" />
+
                 <LogBadge log={logs.fsd} />
               </div>
             </div>
-          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:16}}>
               <KPI label="FSD 구독자" value="128만명" sub="Q1'26 · YoY +51%" color={AC} badge="NEW" />
               <KPI label="FSD ARR"    value="$5.46억" sub="연간 반복매출"     color={GR} badge="NEW" />
               <KPI label="FSD 취득률" value="~14%"   sub="누적 인도 920만대 대비" color={YL} badge="NEW" />
@@ -1268,10 +1881,10 @@ export default function App() {
               <KPI label="일시불 구매자"  value="823,900명" sub="2026.02 폐지" color={MU} />
               <KPI label="FSD 누적 주행" value={(fsdMiles.totalMiles/1e9).toFixed(2)+"B 마일"} sub={"목표 100억 마일 달성! · 일 "+Math.round(fsdMiles.dailyMiles/1e6)+"M 마일"} color={GR} badge="✅" />
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
               <div style={card}>
                 <div style={lbl}>FSD 활성 구독자 추이 (백만명)</div>
-                <ResponsiveContainer width="100%" height={200}>
+                <ResponsiveContainer width="100%" height={isMobile?150:200}>
                   <AreaChart data={FSD_SUBS} margin={{top:6,right:8,left:0,bottom:0}}>
                     <defs>
                       <linearGradient id="fsdg" x1="0" y1="0" x2="0" y2="1">
@@ -1279,11 +1892,11 @@ export default function App() {
                         <stop offset="95%" stopColor={AC} stopOpacity={0}  />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)" />
-                    <XAxis dataKey="q" tick={{fontFamily:"'Space Mono',monospace",fontSize:9,fill:MU}} />
-                    <YAxis domain={[0,1.5]} tick={{fontFamily:"'Space Mono',monospace",fontSize:8,fill:MU}} tickFormatter={v => v+"M"} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--card-overlay)" />
+                    <XAxis dataKey="q" tick={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fill:MU}} />
+                    <YAxis domain={[0,1.5]} tick={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fill:MU}} tickFormatter={v => v+"M"} />
                     <Tooltip formatter={v => [v+"M명","구독자"]} />
-                    <Area dataKey="subs" stroke={AC} fill="url(#fsdg)" strokeWidth={2} dot={{r:4,fill:AC}} />
+                    <Area dataKey="subs" stroke={AC} fill="url(#fsdg)" strokeWidth={2} dot={{r:4,fill:AC}}  isAnimationActive={false}/>
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -1299,11 +1912,11 @@ export default function App() {
                       <>
                         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:12}}>
                           <span style={{color:MU}}>누적 주행</span>
-                          <span style={{fontFamily:"'Space Mono',monospace",color:done?GR:AC}}>{(fsdMiles.totalMiles/1e9).toFixed(3)+"B 마일"}</span>
+                          <span style={{fontFamily:"'Pretendard',sans-serif",color:done?GR:AC}}>{(fsdMiles.totalMiles/1e9).toFixed(3)+"B 마일"}</span>
                         </div>
-                        <div style={{height:20,background:"rgba(255,255,255,.06)",borderRadius:10,overflow:"hidden",marginBottom:8,position:"relative"}}>
+                        <div style={{height:20,background:"var(--border-subtle)",borderRadius:10,overflow:"hidden",marginBottom:8,position:"relative"}}>
                           <div style={{height:"100%",width:pct+"%",background:done?"linear-gradient(90deg,"+GR+",#00ff88)":"linear-gradient(90deg,"+AC+","+GR+")",borderRadius:10,transition:"width 1s ease"}} />
-                          {done && <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Space Mono',monospace",fontSize:9,color:"#000",fontWeight:700}}>✅ 100억 마일 달성!</div>}
+                          {done && <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Pretendard',sans-serif",fontSize:12,color:"#000",fontWeight:700}}>✅ 100억 마일 달성!</div>}
                         </div>
                         <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:MU}}>
                           <span>0</span>
@@ -1325,34 +1938,34 @@ export default function App() {
             </div>
             <div style={card}>
               <div style={lbl}>FSD 글로벌 승인 현황 (2026.06 기준)</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginTop:14}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:20,marginTop:14}}>
                 <div>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:GR,letterSpacing:2,marginBottom:8}}>✅ 승인 완료</div>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:GR,letterSpacing:0.5,marginBottom:8}}>✅ 승인 완료</div>
                   {[["🇺🇸 미국 (감독하)","FSD v14.3.3 · 전국"],["🇺🇸 로보택시 (무감독)","오스틴·달라스·휴스턴"],["🇨🇦 캐나다","운영 중"],["🇳🇱 네덜란드","유럽 첫 승인"],["🇲🇽 멕시코","운영 중"]].map(([c,s],i) => (
                     <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
-                      <span style={{color:MU}}>{c}</span><span style={{fontFamily:"'Space Mono',monospace",color:GR,fontSize:9}}>{s}</span>
+                      <span style={{color:MU}}>{c}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:GR,fontSize:12}}>{s}</span>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:YL,letterSpacing:2,marginBottom:8}}>🟡 심사 진행 중 (12개국)</div>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:YL,letterSpacing:0.5,marginBottom:8}}>🟡 심사 진행 중 (12개국)</div>
                   {[["🇨🇳 중국","Q3'26 전면 승인 예상"],["🇧🇪 벨기에","5,000km 테스트 완료"],["🇪🇸 스페인","80,000km 무사고 완료"],["🇬🇧 영국","2026년 승인 예상"],["🇫🇷 프랑스","EU 심의 연동"],["🇦🇺 호주·뉴질랜드","v14 테스트 중"]].map(([c,s],i) => (
                     <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
-                      <span style={{color:MU}}>{c}</span><span style={{fontFamily:"'Space Mono',monospace",color:YL,fontSize:9}}>{s}</span>
+                      <span style={{color:MU}}>{c}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:YL,fontSize:12}}>{s}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div style={{marginTop:14,borderTop:"1px solid rgba(255,255,255,.06)",paddingTop:14}}>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:AC,letterSpacing:2,marginBottom:8}}>FSD 비즈니스 모델 전환</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:AC,letterSpacing:0.5,marginBottom:8}}>FSD 비즈니스 모델 전환</div>
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10}}>
                   {[
                     ["구독 전용 전환","2026.02.14 일시불 폐지. 월정액만 가능. 예측 가능한 반복 매출 확보.",AC],
                     ["가격 인상 예고","기능 고도화에 따라 구독료 인상 계획. 현재 북미 $99/월.",YL],
                     ["CEO 보상 연계","FSD 구독자 1,000만명 달성 조건. 현재 128만명 (12.8%).",R],
                   ].map(([t,d,c],i) => (
                     <div key={i} style={{background:c+"0d",border:"1px solid "+c+"30",borderRadius:3,padding:"10px 12px"}}>
-                      <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:c,marginBottom:5}}>{t}</div>
+                      <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:c,marginBottom:5}}>{t}</div>
                       <div style={{fontSize:10,color:MU,lineHeight:1.6}}>{d}</div>
                     </div>
                   ))}
@@ -1369,54 +1982,72 @@ export default function App() {
   const RoadmapTab = () => (
     <div>
       <SHdr sub="PRODUCT INTELLIGENCE" title="제품 포트폴리오 & 로드맵" />
-      <div style={{...card,marginBottom:16,borderColor:"rgba(227,25,55,.5)",background:"rgba(227,25,55,.06)"}}>
-        <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
-          <div style={{fontSize:28,flexShrink:0}}>🪦</div>
-          <div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,fontWeight:700,color:R,marginBottom:6}}>MODEL S · MODEL X — 명예로운 퇴역 (2026 Q2)</div>
-            <div style={{fontSize:12,color:TX,lineHeight:1.7}}>
-              머스크 Q4'25 어닝콜: <em style={{color:YL}}>"이제 Model S와 X를 명예로운 퇴역으로 종료할 시간입니다."</em><br/>
-              2012년(S)·2015년(X) 출시 이후 누적 75.5만대 생산. 2025년 인도량 단 3% 수준으로 전락.<br/>
-              <strong style={{color:GR}}>Fremont 해당 라인 → Optimus 100만대/년 라인 전환 (6~8개월 소요)</strong>
-            </div>
+      <div style={{...card,marginBottom:16,borderColor:"rgba(227,25,55,.4)",background:"var(--red-tint)"}}>
+        {/* 상단: 레이블 + 단종 배지 */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:8}}>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:R,letterSpacing:0.5,textTransform:"uppercase"}}>MODEL S · MODEL X</span>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:600,color:R,background:"rgba(227,25,55,.15)",padding:"3px 10px",borderRadius:10,border:"0.5px solid rgba(227,25,55,.3)"}}>2026 Q2 단종</span>
+        </div>
+        {/* 타이틀 */}
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:16,fontWeight:800,color:"var(--text-1)",marginBottom:12}}>명예로운 퇴역 선언</div>
+        {/* 인용구 */}
+        <div style={{background:"var(--card-overlay)",borderLeft:"2px solid rgba(255,214,0,.5)",padding:"8px 12px",borderRadius:"0 6px 6px 0",marginBottom:10}}>
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,marginBottom:3}}>Elon Musk · Q4'25 어닝콜</div>
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?12:13,color:YL,fontStyle:"italic",lineHeight:1.6}}>
+            {"\"이제 Model S와 X를 명예로운 퇴역으로 종료할 시간입니다.\""}
+          </div>
+        </div>
+        {/* 팩트 */}
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,lineHeight:1.7,marginBottom:10}}>
+          2012년(S) · 2015년(X) 출시 이후 누적 75.5만대 생산. 2025년 인도량 단 <strong style={{color:TX}}>3% 수준</strong>으로 전락.
+        </div>
+        {/* 전환 강조 박스 */}
+        <div style={{background:"rgba(16,185,129,.07)",border:"0.5px solid rgba(16,185,129,.3)",borderRadius:8,padding:"10px 14px"}}>
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:GR,marginBottom:3}}>Fremont 라인 전환 계획</div>
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:"rgba(16,185,129,.8)",lineHeight:1.6}}>
+            Model S·X 생산 종료 후 → <strong style={{color:GR}}>Optimus 100만대/년</strong> 라인으로 전환<br/>
+            <span style={{fontSize:11,color:MU}}>전환 소요 기간: 6~8개월</span>
           </div>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:16}}>
         {[
           {n:"Model 3 / Model Y",  st:"PRODUCTION",        sc:"live",d:"핵심 볼륨 모델. 상하이·프리몬트·베를린 생산. 195만대/년.",ex:"195만대/년",ec:GR},
           {n:"Cybertruck",          st:"PRODUCTION",        sc:"live",d:"스테인리스 풀사이즈 픽업. 텍사스 생산. 수율 안정화.",ex:">12.5만대/년",ec:GR},
-          {n:"Cybercab (로보택시)", st:"PILOT PRODUCTION",  sc:"ramp",d:"핸들·페달 없는 완전자율주행 택시. 달라스·휴스턴 무감독 운영. 생산 사이클 10초 목표(Model Y 34초).",ex:"무사고 운행 · 10초 생산 목표",ec:YL},
+          {n:"Cybercab (로보택시)", st:"PRODUCTION → RAMP", sc:"ramp",d:"2026.02 첫 차량 출고, 4월 연속생산 시작. NHTSA 2,500대 상한 제외 확보. 오스틴 전역·텍사스 2개 도시 무감독 운행 확장(2026.06). 초기 생산 극도로 느리다가 연말 급증 예상.",ex:"오스틴 전역 + 텍사스 2개 도시 운영 중",ec:GR},
           {n:"Optimus V3",          st:"DEV → PRODUCTION",  sc:"dev", d:"Q1'26 V3 공개. Fremont 라인 설치 중. 목표: 100만대/년 · 단가 $20,000. 2027년 텍사스 2공장.",ex:"100만대/년 목표 · $20K 목표가",ec:AC},
-          {n:"Megapack / Powerwall",st:"PRODUCTION",        sc:"live",d:"에너지 저장. 2025년 $12.8B (+27% YoY). CA·상하이·TX 생산.",ex:"$12.8B · +27% YoY",ec:GR},
-          {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"v14.3.3. 구독자 128만명(+51%). 취득률 14%. ARR $546M. 네덜란드 첫 유럽 승인.",ex:"ARR $546M · 12개국 심사",ec:YL},
+          {n:"Megapack / Powerwall",st:"PRODUCTION·SCALING",sc:"live",d:"에너지 저장. 2025년 $12.8B(+27% YoY). CA·상하이·TX 생산. 2025 배포 46.7GWh(+48%). 2026.06.23 NatPower(이탈리아·영국) $4~5B 계약 체결 — 25GWh 1단계(CA 공장 연산 62.5%), 장기 목표 100GWh·$15B 이상(20년). Autobidder 포함 수직통합.",ex:"NatPower $5B · 46.7GWh 배포",ec:GR},
+          {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"v14.3.4: Cybertruck Smart Summon 추가. 구독자 128만명(+51%). 네덜란드·벨기에 유럽 승인. 독일·핀란드 선제 승인 검토(EU 공식 결정 10월 예정). 스웨덴 반대 권고(속도위반). 한국 포함 12개국 심사 중.",ex:"독일·핀란드 선제 검토 · ARR $546M",ec:YL},
           {n:"Tesla Semi",          st:"PILOT PRODUCTION",  sc:"ramp",d:"전기 대형트럭. 2026년 생산 돌입 예정.",ex:"2026년 양산 목표",ec:YL},
+          {n:"MEGAPOD",              st:"TRADEMARK FILED",   sc:"dev", d:"2026.06.18 USPTO 상표 출원. 모듈형 AI 데이터센터 하드웨어(서버·PDU·냉각 포함). Supercharger 7GW 전력 활용 분산 AI 인프라 구상. Digital Optimus와 연계.",ex:"2026.06.18 출원 · 미출시",ec:AC},
+          {n:"Tesla Roadster (2세대)",st:"REVEAL 예정",        sc:"dev", d:"2026년 8월 공개·데모 이벤트 예정. Musk Q1'26 어닝콜에서 공개 지연 확인. SpaceX 패키지(냉기 추진기) 포함. $200K~250K 예정. 양산 2027년 시작.",ex:"2026.08 공개 예정 · $200K~250K",ec:YL},
+          {n:"Model Y L (장축형)",   st:"UNDER DEVELOPMENT", sc:"dev", d:"4.28m 소형 SUV. 2026년 9월 상하이 양산 시작(AutoForecast). 자율주행 버전 포함 계획. 미국·유럽 생산은 2028년 이후.",ex:"2026.09 상하이 양산 예정",ec:AC},
           {n:"Terafab",             st:"UNDER CONSTRUCTION",sc:"dev", d:"Giga Texas $3B 반도체 R&D 팹. Intel 14A. SpaceX·xAI 공동. 착공 2026.04.22.",ex:"$3B · Intel 14A · 착공 완료",ec:AC},
         ].map((p,i) => {
-          const sc = {live:{bg:"rgba(0,230,118,.15)",c:GR},ramp:{bg:"rgba(255,214,0,.15)",c:YL},dev:{bg:"rgba(0,212,255,.15)",c:AC}}[p.sc];
+          const sc = {live:{bg:"rgba(16,185,129,.15)",c:GR},ramp:{bg:"rgba(251,191,36,.15)",c:YL},dev:{bg:"rgba(56,189,248,.15)",c:AC}}[p.sc];
           return (
             <div key={i} style={card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:12,fontWeight:700,color:"#fff"}}>{p.n}</div>
-                <span style={{background:sc.bg,color:sc.c,fontFamily:"'Space Mono',monospace",fontSize:7,padding:"2px 7px",borderRadius:2,whiteSpace:"nowrap"}}>{p.st}</span>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:"var(--text-1)"}}>{p.n}</div>
+                <span style={{background:sc.bg,color:sc.c,fontFamily:"'Pretendard',sans-serif",fontSize:10,padding:"2px 7px",borderRadius:2,whiteSpace:"nowrap"}}>{p.st}</span>
               </div>
               <div style={{fontSize:11,color:MU,lineHeight:1.65,marginBottom:8}}>{p.d}</div>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:p.ec}}>{p.ex}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:p.ec}}>{p.ex}</div>
             </div>
           );
         })}
       </div>
       <div style={card}>
         <div style={lbl}>2026~2030 시나리오</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginTop:12}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginTop:12}}>
           {[
-            ["BULL","$1,200+",GR,"rgba(0,230,118,.06)","rgba(0,230,118,.2)","Robotaxi 네트워크 효과·Optimus 대량생산·FSD 전세계 승인·Terafab 칩 자체조달"],
-            ["BASE 2026","$350~450","#fff","rgba(227,25,55,.06)",BD,"CapEx $25B 부담·Cybercab 양산 지연·유럽 FSD 지연"],
-            ["VISION 2030","$700~1,000",YL,"rgba(255,214,0,.06)","rgba(255,214,0,.2)","자동차 46%→, Robotaxi·Optimus·에너지 분산. AI 플랫폼 기업 전환"],
+            ["BULL","$1,200+",GR,"rgba(16,185,129,.08)","rgba(16,185,129,.2)","Robotaxi 네트워크 효과·Optimus 대량생산·FSD 전세계 승인·Terafab 칩 자체조달"],
+            ["BASE 2026","$350~450","var(--text-1)","var(--red-tint)",BD,"CapEx $25B 부담·Cybercab 양산 지연·유럽 FSD 지연"],
+            ["VISION 2030","$700~1,000",YL,"rgba(251,191,36,.08)","rgba(251,191,36,.2)","자동차 46%→, Robotaxi·Optimus·에너지 분산. AI 플랫폼 기업 전환"],
           ].map(([l,v,vc,bg,br,d],i) => (
             <div key={i} style={{background:bg,border:"1px solid "+br,borderRadius:4,padding:14}}>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:vc,letterSpacing:2,marginBottom:6}}>{l}</div>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:16,fontWeight:700,color:vc,marginBottom:6}}>{v}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:vc,letterSpacing:0.5,marginBottom:6}}>{l}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:16,fontWeight:700,color:vc,marginBottom:6}}>{v}</div>
               <div style={{fontSize:10,color:MU,lineHeight:1.6}}>{d}</div>
             </div>
           ))}
@@ -1429,50 +2060,43 @@ export default function App() {
   const RiskTab = () => (
     <div>
       <SHdr sub="RISK & OUTLOOK" title="리스크 매트릭스 & 종합 전망" />
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
         <div style={card}>
           <div style={lbl}>핵심 리스크 레이더</div>
-          {[["CapEx $25B 과부하",90,R,"NEW"],["경쟁 심화 (BYD·中)",88,R,null],["FSD 규제 지연",80,R,null],["머스크 집중 리스크",75,R,null],["Optimus 생산 불확실성",72,YL,"NEW"],["유럽 브랜드 부진",70,YL,null],["Terafab 실행 리스크",65,YL,"NEW"],["배터리 공급 제약",55,YL,null],["재무 유동성",25,GR,null]].map(([l,p,c,badge],i) => (
+          {[["CapEx $25B 과부하",90,R,"NEW"],["FSD 안전성 美상원·EU 조사",88,R,"NEW"],["스웨덴 FSD 반대↔독일 선제 승인",82,YL,"NEW"],["NHTSA Model 3 충돌 조사",82,R,"NEW"],["경쟁 심화 (BYD·中)",80,R,null],["FSD 규제 지연",78,R,null],["머스크 집중 리스크",75,R,null],["Optimus 생산 불확실성",70,YL,"NEW"],["유럽 브랜드 부진",68,YL,null],["Terafab 실행 리스크",62,YL,"NEW"],["배터리 공급 제약",50,YL,null],["재무 유동성",22,GR,null]].map(([l,p,c,badge],i) => (
             <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginTop:11}}>
               <div style={{width:140,fontSize:10,color:MU,flexShrink:0,display:"flex",alignItems:"center",gap:5}}>
                 {l}
-                {badge && <span style={{background:c+"20",border:"1px solid "+c+"50",color:c,fontSize:7,padding:"1px 4px",borderRadius:2}}>{badge}</span>}
+                {badge && <span style={{background:c+"20",border:"1px solid "+c+"50",color:c,fontSize:10,padding:"1px 4px",borderRadius:2}}>{badge}</span>}
               </div>
-              <div style={{flex:1,height:6,background:"rgba(255,255,255,.06)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{flex:1,height:6,background:"var(--border-subtle)",borderRadius:3,overflow:"hidden"}}>
                 <div style={{height:"100%",width:p+"%",background:c,borderRadius:3}} />
               </div>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,width:28,textAlign:"right"}}>{p+"%"}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,width:28,textAlign:"right"}}>{p+"%"}</div>
             </div>
           ))}
         </div>
         <div>
           <div style={{...card,marginBottom:12}}>
             <div style={lbl}>2026 핵심 모니터링</div>
-            {[["🔴 CapEx $25B 집행 속도","FCF 음전환 타이밍",R],["🔴 Cybercab 양산 전환","핵심 밸류에이션 변수",R],["🔴 Optimus 2026 생산량","머스크 '예측 불가'",R],["🟡 FSD 중국 전면 승인","Q3'26 목표",YL],["🟡 Terafab 건설 진척","Intel 파트너십",YL],["🟡 FSD 구독자 증가율","CEO 보상 마일스톤",YL],["🟢 에너지 사업 성장","안정 +27%",GR],["🟢 FSD ARR $546M","고마진 반복매출",GR]].map(([l,v,c],i) => (
+            {[["🔴 스웨덴·NHTSA FSD 안전성 조사","유럽 확장 지연 최대 변수",R],["🔴 FSD 안전성 美상원·EU 조사","로보택시 확장 지연 변수",R],["🔴 CapEx $25B 집행 속도","FCF 음전환 타이밍",R],["🔴 Cybercab 양산 전환","핵심 밸류에이션 변수",R],["🔴 Optimus 2026 생산량","머스크 '예측 불가'",R],["🟡 FSD 중국 전면 승인","Q3'26 목표",YL],["🟡 Terafab 건설 진척","Intel 파트너십",YL],["🟡 FSD 구독자 증가율","CEO 보상 마일스톤",YL],["🟢 에너지 사업 성장","안정 +27%",GR],["🟢 FSD ARR $546M","고마진 반복매출",GR]].map(([l,v,c],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
-                <span style={{color:MU}}>{l}</span><span style={{fontFamily:"'Space Mono',monospace",color:c,fontSize:9}}>{v}</span>
+                <span style={{color:MU}}>{l}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:c,fontSize:12}}>{v}</span>
               </div>
             ))}
           </div>
-          <div style={card}>
-            <div style={lbl}>CEO 리스크 특이사항</div>
-            <div style={{fontSize:11,color:MU,lineHeight:1.8,marginTop:8}}>
-              2026.06.05 트럼프 Epstein 파일 언급 → <strong style={{color:R}}>당일 주가 -14.3% 급락</strong>.<br/>
-              DOGE 참여로 유럽 판매 <strong style={{color:R}}>-39%</strong>(2025). 퇴임 후 Q1'26 회복.<br/>
-              Terafab은 SpaceX·xAI와의 이해충돌 가능성 내재.
-            </div>
-          </div>
+
         </div>
       </div>
       <div style={card}>
         <div style={lbl}>종합 결론</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,marginTop:12}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:20,marginTop:12}}>
           {[
-            ["TESLA 2026 투자 테제",R,"CapEx $25B 충격은 단기 FCF 압박이나, AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조. FSD ARR·에너지 성장이 버퍼 역할. 현재 216x PER은 AI·자율주행 테제 프리미엄."],
+            ["TESLA 2026 투자 테제",R,"CapEx $25B 충격은 단기 FCF 압박이나, AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조. FSD ARR·에너지 성장이 버퍼 역할. 현재 ~366x PER(2026.06 기준)은 AI·자율주행 테제 프리미엄. 다음 실적 발표 2026.07.22 예정."],
             ["FSD → ROBOTAXI → OPTIMUS 로드맵",AC,"FSD 취득률 14%·구독 전용 전환이 반복 수익 기반 구축. 10억 마일 목표 도달 시 무감독 FSD 전면화. Robotaxi 확장 → Optimus 양산이 순차적 밸류에이션 리레이팅 핵심."],
           ].map(([t,c,d],i) => (
             <div key={i}>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:c,letterSpacing:2,marginBottom:8}}>{t}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:c,letterSpacing:0.5,marginBottom:8}}>{t}</div>
               <div style={{fontSize:11,color:MU,lineHeight:1.8}}>{d}</div>
             </div>
           ))}
@@ -1486,7 +2110,7 @@ export default function App() {
     <div>
       <SHdr sub="EARNINGS CALL ARCHIVE" title="어닝콜 발언 아카이브">
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <AIBtn onUpdate={() => guard(updateEarnings)} loading={ld.earnings} label="최신 어닝콜 업데이트" />
+
           <LogBadge log={logs.earnings} />
         </div>
       </SHdr>
@@ -1495,64 +2119,78 @@ export default function App() {
         <button style={{...fb(true),padding:"7px 14px"}} onClick={() => setShowForm(!showForm)}>{showForm ? "✕ 닫기" : "+ 직접 추가"}</button>
       </div>
       {showForm && (
-        <div style={{...card,marginBottom:12,borderColor:"rgba(0,212,255,.4)"}}>
+        <div style={{...card,marginBottom:12,borderColor:"rgba(56,189,248,.4)"}}>
           <div style={{...lbl,color:AC}}>MANUAL ENTRY</div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:8}}>
-            <div><div style={{fontSize:9,color:MU,marginBottom:2}}>분기</div><input style={{...inp,width:"100%"}} value={nc.q} onChange={e => setNc({...nc,q:e.target.value})} /></div>
-            <div><div style={{fontSize:9,color:MU,marginBottom:2}}>날짜</div><input style={{...inp,width:"100%"}} type="date" value={nc.date} onChange={e => setNc({...nc,date:e.target.value})} /></div>
-            <div><div style={{fontSize:9,color:MU,marginBottom:2}}>감성</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:8,marginTop:8}}>
+            <div><div style={{fontSize:12,color:MU,marginBottom:2}}>분기</div><input style={{...inp,width:"100%"}} value={nc.q} onChange={e => setNc({...nc,q:e.target.value})} /></div>
+            <div><div style={{fontSize:12,color:MU,marginBottom:2}}>날짜</div><input style={{...inp,width:"100%"}} type="date" value={nc.date} onChange={e => setNc({...nc,date:e.target.value})} /></div>
+            <div><div style={{fontSize:12,color:MU,marginBottom:2}}>감성</div>
               <select style={{...inp,width:"100%"}} value={nc.sentiment} onChange={e => setNc({...nc,sentiment:e.target.value})}>
                 <option value="positive">▲ 긍정</option><option value="mixed">◆ 혼조</option><option value="negative">▼ 부진</option>
               </select></div>
           </div>
-          <div style={{marginTop:7}}><div style={{fontSize:9,color:MU,marginBottom:2}}>헤드라인</div><input style={{...inp,width:"100%"}} value={nc.headline} onChange={e => setNc({...nc,headline:e.target.value})} /></div>
+          <div style={{marginTop:7}}><div style={{fontSize:12,color:MU,marginBottom:2}}>헤드라인</div><input style={{...inp,width:"100%"}} value={nc.headline} onChange={e => setNc({...nc,headline:e.target.value})} /></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 3fr",gap:8,marginTop:7}}>
-            <div><div style={{fontSize:9,color:MU,marginBottom:2}}>발언자</div><input style={{...inp,width:"100%"}} value={nc.s1} onChange={e => setNc({...nc,s1:e.target.value})} /></div>
-            <div><div style={{fontSize:9,color:MU,marginBottom:2}}>발언</div><input style={{...inp,width:"100%"}} value={nc.q1} onChange={e => setNc({...nc,q1:e.target.value})} /></div>
+            <div><div style={{fontSize:12,color:MU,marginBottom:2}}>발언자</div><input style={{...inp,width:"100%"}} value={nc.s1} onChange={e => setNc({...nc,s1:e.target.value})} /></div>
+            <div><div style={{fontSize:12,color:MU,marginBottom:2}}>발언</div><input style={{...inp,width:"100%"}} value={nc.q1} onChange={e => setNc({...nc,q1:e.target.value})} /></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8,marginTop:7}}>
             {[["r","매출"],["e","EPS"],["g","총이익률"],["o","영업이익"],["rd","R&D"],["capex","CapEx"]].map(([k,l]) => (
-              <div key={k}><div style={{fontSize:9,color:MU,marginBottom:2}}>{l}</div><input style={{...inp,width:"100%"}} value={nc[k]} onChange={e => setNc({...nc,[k]:e.target.value})} /></div>
+              <div key={k}><div style={{fontSize:12,color:MU,marginBottom:2}}>{l}</div><input style={{...inp,width:"100%"}} value={nc[k]} onChange={e => setNc({...nc,[k]:e.target.value})} /></div>
             ))}
           </div>
-          <div style={{marginTop:7}}><div style={{fontSize:9,color:MU,marginBottom:2}}>태그 (쉼표 구분)</div><input style={{...inp,width:"100%"}} value={nc.tags} onChange={e => setNc({...nc,tags:e.target.value})} /></div>
+          <div style={{marginTop:7}}><div style={{fontSize:12,color:MU,marginBottom:2}}>태그 (쉼표 구분)</div><input style={{...inp,width:"100%"}} value={nc.tags} onChange={e => setNc({...nc,tags:e.target.value})} /></div>
           <div style={{display:"flex",gap:7,marginTop:10}}>
-            <button onClick={addCall} style={{background:"rgba(227,25,55,.2)",border:"1px solid "+R,color:R,padding:"6px 16px",borderRadius:3,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9}}>저장</button>
-            <button onClick={() => setShowForm(false)} style={{background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:MU,padding:"6px 16px",borderRadius:3,cursor:"pointer",fontFamily:"'Space Mono',monospace",fontSize:9}}>취소</button>
+            <button onClick={addCall} style={{background:"rgba(227,25,55,.2)",border:"1px solid "+R,color:R,padding:"6px 16px",borderRadius:3,cursor:"pointer",fontFamily:"'Pretendard',sans-serif",fontSize:12}}>저장</button>
+            <button onClick={() => setShowForm(false)} style={{background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:MU,padding:"6px 16px",borderRadius:3,cursor:"pointer",fontFamily:"'Pretendard',sans-serif",fontSize:12}}>취소</button>
           </div>
         </div>
       )}
-      <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,marginBottom:8,letterSpacing:2}}>{"ARCHIVE — "+filtCalls.length+"건 (R&D·CapEx 포함)"}</div>
+      <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,marginBottom:8,letterSpacing:0.5}}>{"ARCHIVE — "+filtCalls.length+"건 (R&D·CapEx 포함)"}</div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         {filtCalls.map(c => {
           const st = SENT_ST[c.sentiment];
           const open = openCall === c.id;
+          const sentLabel = {positive:"긍정",mixed:"혼조",negative:"부진"}[c.sentiment]||c.sentiment;
           return (
-            <div key={c.id} style={{background:"#141420",border:"1px solid "+st.br,borderLeft:"3px solid "+st.c,borderRadius:4,overflow:"hidden"}}>
-              <div style={{padding:"10px 14px",cursor:"pointer",display:"flex",alignItems:"flex-start",gap:10,flexWrap:"wrap"}} onClick={() => setOpenCall(open ? null : c.id)}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,fontWeight:700,color:st.c,minWidth:55}}>{c.q}</div>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,minWidth:80}}>{c.date}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,color:TX,marginBottom:c.highlight?3:0}}>{c.headline}</div>
-                  {c.highlight && <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:st.c}}>{c.highlight}</div>}
+            <div key={c.id} style={{background:SF,border:"0.5px solid "+st.br,borderLeft:"3px solid "+st.c,borderRadius:8,overflow:"hidden"}}>
+              <div style={{padding:"12px 14px",cursor:"pointer"}} onClick={() => setOpenCall(open ? null : c.id)}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:14,fontWeight:800,color:st.c}}>{c.q}</span>
+                    <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:600,color:st.c,background:st.c+"18",padding:"2px 8px",borderRadius:10}}>{sentLabel}</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU}}>{c.date}</span>
+                    <span style={{fontSize:10,color:MU}}>{open?"▲":"▼"}</span>
+                  </div>
                 </div>
-                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{c.tags.slice(0,3).map(t => <span key={t} style={{background:"rgba(227,25,55,.1)",border:"1px solid rgba(227,25,55,.25)",color:R,fontFamily:"'Space Mono',monospace",fontSize:7,padding:"2px 5px",borderRadius:2}}>{t}</span>)}</div>
-                <div style={{color:MU,fontSize:10}}>{open ? "▲" : "▼"}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:13,fontWeight:600,color:TX,lineHeight:1.5,marginBottom:c.highlight?6:8}}>{c.headline}</div>
+                {c.highlight && (
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:st.c,marginBottom:8}}>{c.highlight}</div>
+                )}
+                {c.tags.length > 0 && (
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {c.tags.slice(0,4).map(t => (
+                      <span key={t} style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,background:"rgba(227,25,55,.1)",border:"0.5px solid rgba(227,25,55,.25)",color:R,padding:"2px 8px",borderRadius:10}}>{t}</span>
+                    ))}
+                  </div>
+                )}
               </div>
               {open && (
-                <div style={{padding:"0 14px 12px",borderTop:"1px solid rgba(255,255,255,.05)"}}>
-                  <div style={{display:"flex",gap:8,marginTop:8,marginBottom:10,flexWrap:"wrap"}}>
+                <div style={{padding:"10px 14px 14px",borderTop:"0.5px solid rgba(255,255,255,.06)",background:"var(--card-overlay)"}}>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)",gap:6,marginBottom:12}}>
                     {Object.entries(c.m).map(([k,v]) => v ? (
-                      <div key={k} style={{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:3,padding:"4px 10px"}}>
-                        <div style={{fontFamily:"'Space Mono',monospace",fontSize:7,color:k==="rd"||k==="capex"?AC:MU,letterSpacing:2,marginBottom:1}}>{k==="rd"?"R&D":k==="capex"?"CAPEX":k.toUpperCase()}</div>
-                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:12,fontWeight:700,color:k==="rd"||k==="capex"?AC:st.c}}>{v}</div>
+                      <div key={k} style={{background:SF2,border:"0.5px solid rgba(255,255,255,.07)",borderRadius:6,padding:"7px 10px"}}>
+                        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:k==="rd"||k==="capex"?AC:MU,fontWeight:500,marginBottom:3}}>{k==="rd"?"R&D":k==="capex"?"CapEx":k.toUpperCase()}</div>
+                        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:13,fontWeight:700,color:k==="rd"||k==="capex"?AC:st.c}}>{v}</div>
                       </div>
                     ) : null)}
                   </div>
                   {c.quotes.map((q,i) => (
-                    <div key={i} style={{background:"rgba(227,25,55,.04)",borderLeft:"2px solid rgba(227,25,55,.4)",padding:"7px 12px",marginBottom:6,borderRadius:"0 3px 3px 0"}}>
-                      <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:R,marginBottom:3}}>{q.s}</div>
-                      <div style={{fontSize:12,color:TX,lineHeight:1.7,fontStyle:"italic"}}>{"\""+q.t+"\""}</div>
+                    <div key={i} style={{background:"rgba(227,25,55,.04)",borderLeft:"2px solid rgba(227,25,55,.4)",padding:"8px 12px",marginBottom:6,borderRadius:"0 6px 6px 0"}}>
+                      <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:600,color:R,marginBottom:4}}>{q.s}</div>
+                      <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:TX,lineHeight:1.7,fontStyle:"italic"}}>{"\""+q.t+"\""}</div>
                     </div>
                   ))}
                 </div>
@@ -1569,7 +2207,7 @@ export default function App() {
     <div>
       <SHdr sub="X POST TIMELINE" title="머스크 X 발언 아카이브">
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <AIBtn onUpdate={() => guard(updateXPost)} loading={ld.xpost} label="최신 발언 업데이트" />
+
           <LogBadge log={logs.xpost} />
         </div>
       </SHdr>
@@ -1580,7 +2218,7 @@ export default function App() {
       <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
         {XCATS.map(c => <button key={c} style={fb(xCat === c)} onClick={() => setXCat(c)}>{c}</button>)}
       </div>
-      <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,marginBottom:10,letterSpacing:2}}>{"총 "+filtPosts.length+"건 · "}<span style={{color:R}}>● HIGH</span>{" "}<span style={{color:YL}}>● MED</span></div>
+      <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,marginBottom:10,letterSpacing:0.5}}>{"총 "+filtPosts.length+"건 · "}<span style={{color:R}}>● HIGH</span>{" "}<span style={{color:YL}}>● MED</span></div>
       <div style={{position:"relative",paddingLeft:26}}>
         <div style={{position:"absolute",left:7,top:0,bottom:0,width:1,background:"linear-gradient(to bottom,"+R+",transparent)"}} />
         {filtPosts.map(p => (
@@ -1588,15 +2226,15 @@ export default function App() {
             <div style={{position:"absolute",left:-22,top:5,width:11,height:11,borderRadius:"50%",background:IMP_C[p.impact],border:"2px solid "+DK,boxShadow:"0 0 6px "+IMP_C[p.impact]+"80"}} />
             <div style={{...card,borderLeft:"2px solid "+IMP_C[p.impact]+"50"}}>
               <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:7,flexWrap:"wrap"}}>
-                <span style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:IMP_C[p.impact]}}>{p.date}</span>
-                <span style={{background:"rgba(227,25,55,.12)",border:"1px solid rgba(227,25,55,.3)",color:R,fontFamily:"'Space Mono',monospace",fontSize:7,padding:"2px 5px",borderRadius:2}}>{p.cat}</span>
-                <span style={{background:IMP_C[p.impact]+"18",border:"1px solid "+IMP_C[p.impact]+"50",color:IMP_C[p.impact],fontFamily:"'Space Mono',monospace",fontSize:7,padding:"2px 5px",borderRadius:2}}>{p.impact.toUpperCase()}</span>
-                <span style={{marginLeft:"auto",fontFamily:"'Space Mono',monospace",fontSize:9,color:MU}}>{"♥"+p.likes+" ↺"+p.reposts}</span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:IMP_C[p.impact]}}>{p.date}</span>
+                <span style={{background:"rgba(227,25,55,.12)",border:"1px solid rgba(227,25,55,.3)",color:R,fontFamily:"'Pretendard',sans-serif",fontSize:10,padding:"2px 5px",borderRadius:2}}>{p.cat}</span>
+                <span style={{background:IMP_C[p.impact]+"18",border:"1px solid "+IMP_C[p.impact]+"50",color:IMP_C[p.impact],fontFamily:"'Pretendard',sans-serif",fontSize:10,padding:"2px 5px",borderRadius:2}}>{p.impact.toUpperCase()}</span>
+                <span style={{marginLeft:"auto",fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU}}>{"♥"+p.likes+" ↺"+p.reposts}</span>
               </div>
               <div style={{fontSize:12,color:TX,lineHeight:1.75,fontStyle:"italic",marginBottom:7,borderLeft:"2px solid rgba(29,155,240,.4)",paddingLeft:10}}>
                 {"\""+(xLang === "ko" ? p.ko : p.en)+"\""}
               </div>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU}}>{"📌 "+p.ctx}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU}}>{"📌 "+p.ctx}</div>
             </div>
           </div>
         ))}
@@ -1612,9 +2250,9 @@ export default function App() {
       if (!active||!payload?.length) return null;
       const d = payload[0].payload;
       return (
-        <div style={{background:"#1a1a28",border:"1px solid "+d.color+"60",borderRadius:4,padding:"8px 12px",fontFamily:"'Space Mono',monospace",fontSize:10}}>
+        <div style={{background:"var(--bg-card)",border:"1px solid "+d.color+"60",borderRadius:4,padding:"8px 12px",fontFamily:"'Pretendard',sans-serif",fontSize:10}}>
           <div style={{color:d.color,fontWeight:700,marginBottom:2}}>{d.name}</div>
-          <div style={{color:"#fff"}}>{d.value+"% · "+d.shares}</div>
+          <div style={{color:"var(--text-1)"}}>{d.value+"% · "+d.shares}</div>
         </div>
       );
     }
@@ -1623,21 +2261,30 @@ export default function App() {
       <div>
         <SHdr sub="OWNERSHIP & INSTITUTIONAL ACTIVITY" title="지분현황 & 기관 동향">
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <AIBtn onUpdate={() => guard(updateOwnership)} loading={ld.ownership} label="기관 동향 업데이트" />
+
             <LogBadge log={logs.ownership} />
           </div>
         </SHdr>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:14}}>
-          <KPI label="총 발행주식" value="~3.76B주"  sub="2026.06" />
-          <KPI label="일론 머스크" value="13.8%"     sub="717M주"  color={R} />
-          <KPI label="기관 투자자" value="41.7%"     sub="4,500+ 기관" color={AC} />
-          <KPI label="리테일"      value="35.1%"     color={GR} />
-          <KPI label="내부자 합계" value="23.2%"     color={YL} />
+        {/* ── 섹션 구분: 주주 구성 ── */}
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"0 0 12px"}}>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:MU,letterSpacing:0.5,whiteSpace:"nowrap"}}>
+            👥 주주 구성 현황
+          </div>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:14}}>
+          <KPI label="총 발행주식" value="~3.76B주"  sub="2026.06" />
+          <KPI label="일론 머스크" value="19.9%"     sub="1.12B주 (6/16 옵션행사)"  color={R} />
+          <KPI label="기관 투자자" value="41.7%"     sub="4,500+ 기관" color={AC} />
+          <KPI label="리테일"      value="35.1%"     sub="~1.17B주" color={GR} />
+          <KPI label="내부자 합계" value="23.2%"     sub="머스크 외 임원" color={YL} />
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginBottom:12}}>
           <div style={card}>
             <div style={lbl}>주주 구성</div>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={isMobile?160:240}>
               <PieChart>
                 <Pie data={OWNERSHIP} cx="50%" cy="50%" outerRadius={90} innerRadius={42} dataKey="value" label={({value}) => value+"%"} labelLine={false}>
                   {OWNERSHIP.map((e,i) => <Cell key={i} fill={e.color} />)}
@@ -1652,14 +2299,170 @@ export default function App() {
               <div key={i} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,.05)"}}>
                 <div style={{width:8,height:8,borderRadius:"50%",background:d.color,flexShrink:0}} />
                 <div style={{flex:1,fontSize:11,color:TX}}>{d.name}</div>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,minWidth:52,textAlign:"right"}}>{d.shares}</div>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:10,fontWeight:700,color:d.color,minWidth:38,textAlign:"right"}}>{d.value+"%"}</div>
-                <div style={{width:44,height:4,background:"rgba(255,255,255,.06)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,minWidth:52,textAlign:"right"}}>{d.shares}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:d.color,minWidth:38,textAlign:"right"}}>{d.value+"%"}</div>
+                <div style={{width:44,height:4,background:"var(--border-subtle)",borderRadius:3,overflow:"hidden"}}>
                   <div style={{height:"100%",background:d.color,width:((d.value/36)*100)+"%",borderRadius:3}} />
                 </div>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ── 섹션 구분: 한국인 보유 ── */}
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0 12px"}}>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:MU,letterSpacing:0.5,whiteSpace:"nowrap"}}>
+            🇰🇷 한국인 보유 현황 (한국예탁결제원)
+          </div>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+        </div>
+
+        {/* 한국인 보유 KPI */}
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:8,marginBottom:12}}>
+          <KPI label="보관금액 (2026.07.02)" value="$230.0억" sub="약 35.17조원" color={AC} />
+          <KPI label="투자자 수 (Q2'25)" value="70.2만명" sub="해외주식 최다" color={GR} />
+          <KPI label="1인 평균 보유" value="78.4주" sub="중앙값 10~30주" />
+          <KPI label="추정 지분율" value="~1.4%" sub="3.76B주 기준" color={YL} />
+        </div>
+
+        {/* KSD 분기별 보관금액 추이 */}
+        <div style={{...card,marginBottom:12}}>
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:TX,marginBottom:12}}>분기별 보관금액 추이 (출처: 한국예탁결제원)</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:8,marginBottom:14}}>
+            {[
+              {q:"2025 상반기",date:"2025.07.14 발표",amt:"$212.94억",won:"약 29.4조원",rank:"해외주식 1위",chg:"+전분기 대비 상승",color:GR},
+              {q:"2025 Q3",date:"2025.10.27 발표",amt:"$274억",won:"약 39.2조원",rank:"해외주식 1위",chg:"+28.8% QoQ",color:GR},
+              {q:"2026.07.02",date:"2026.07.04 SEIBro 확정",amt:"$230.0억",won:"약 35.17조원",rank:"해외주식 1위",chg:"+9.1% YoY (vs 210.8억)",color:GR},
+            ].map((d,i) => (
+              <div key={i} style={{background:SF2,borderRadius:8,padding:"12px 14px",border:"0.5px solid rgba(255,255,255,0.07)"}}>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:d.color,marginBottom:4}}>{d.q}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,marginBottom:6}}>{d.date}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:18,fontWeight:800,color:d.amt==="미확인"?MU:TX,marginBottom:4}}>{d.amt}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU}}>{d.won}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:d.color,marginTop:4}}>{d.chg}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 🆕 연도별 7/2 기준 시계열 (2019~2026) - SEIBro 원본 */}
+          <div style={{marginTop:14,marginBottom:16,padding:"14px 12px 10px",background:"linear-gradient(135deg,rgba(99,153,34,.08),rgba(0,212,255,.04) 60%)",borderRadius:8,border:"0.5px solid rgba(99,153,34,.2)"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:10}}>
+              <div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:TX}}>
+                  연도별 7월 2일 기준 · 한국 투자자 테슬라 보관금액
+                </div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:MU,marginTop:2}}>
+                  2019 → 2026 · 8년간 <span style={{color:GR,fontWeight:700}}>약 251배 성장</span> · 순위 21위 → 1위
+                </div>
+              </div>
+              <div style={{background:"rgba(99,153,34,.15)",border:"0.5px solid "+GR+"40",borderRadius:4,padding:"3px 10px"}}>
+                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:GR,fontWeight:700}}>+251×</div>
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart
+                data={[
+                  {year:"2019",amt:0.9,   won:0.14,  rank:21},
+                  {year:"2020",amt:10.6,  won:1.62,  rank:2},
+                  {year:"2021",amt:91.8,  won:14.04, rank:1},
+                  {year:"2022",amt:117.9, won:18.03, rank:1},
+                  {year:"2023",amt:145.9, won:22.32, rank:1},
+                  {year:"2024",amt:139.0, won:21.25, rank:1},
+                  {year:"2025",amt:210.8, won:32.23, rank:1},
+                  {year:"2026",amt:230.0, won:35.17, rank:1},
+                ]}
+                margin={{top:5,right:10,left:0,bottom:5}}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.05)" />
+                <XAxis
+                  dataKey="year"
+                  tick={{fontSize:10,fill:MU,fontFamily:"'JetBrains Mono',monospace"}}
+                  axisLine={{stroke:"rgba(255,255,255,.1)"}}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{fontSize:10,fill:MU,fontFamily:"'JetBrains Mono',monospace"}}
+                  axisLine={false}
+                  tickLine={false}
+                  width={40}
+                  label={{value:"억달러",angle:-90,position:"insideLeft",style:{fontSize:9,fill:MU}}}
+                />
+                <Tooltip
+                  contentStyle={{background:"rgba(15,23,42,.95)",border:"1px solid rgba(255,255,255,.1)",borderRadius:6,fontSize:11,fontFamily:"'Pretendard',sans-serif"}}
+                  labelStyle={{color:TX,fontSize:11,fontWeight:700}}
+                  formatter={(v,name,item) => {
+                    if (name === "amt") {
+                      const won = item?.payload?.won;
+                      const rank = item?.payload?.rank;
+                      return [`$${v}억 · ${won}조원 · ${rank}위`,"보관금액"];
+                    }
+                    return [v,name];
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="amt"
+                  stroke={GR}
+                  strokeWidth={2.5}
+                  dot={{r:4,fill:GR,strokeWidth:0}}
+                  activeDot={{r:6,stroke:GR,strokeWidth:2,fill:"#0f172a"}}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+
+            <div style={{marginTop:6,paddingTop:6,borderTop:"0.5px solid rgba(255,255,255,.05)",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:4,fontSize:9,color:MU,fontFamily:"'Pretendard',sans-serif"}}>
+              <div>
+                자료:{" "}
+                <a href="https://seibro.or.kr" target="_blank" rel="noopener noreferrer" style={{color:AC,textDecoration:"none"}}>SEIBro</a>
+                {" · 한국예탁결제원 · 정리 @ohmahahm"}
+              </div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace"}}>
+                환율 1,529.30원 기준(2026) · 2022=7/1, 2023=6/30
+              </div>
+            </div>
+          </div>
+
+          {/* 계층별 분포 (Q2'25 기준) */}
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:TX,marginBottom:10}}>계층별 보유 분포 (2025년 6월 기준)</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {[
+              {range:"0~100주",investors:"90%",share:"10%",avg:"8.7주",color:"rgba(99,153,34,.7)"},
+              {range:"100~500주",investors:"7%",share:"20%",avg:"223.9주",color:"rgba(0,212,255,.7)"},
+              {range:"500~1,000주",investors:"2%",share:"20%",avg:"783.6주",color:"rgba(251,191,36,.7)"},
+              {range:"1,000~5,000주",investors:"1%",share:"25%",avg:"1,959주",color:"rgba(227,25,55,.7)"},
+              {range:"5,000주 이상",investors:"<1%",share:"25%이상",avg:"고액 투자자",color:"rgba(227,25,55,1)"},
+            ].map((d,i) => (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"0.5px solid rgba(255,255,255,0.05)"}}>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:TX,minWidth:100}}>{d.range}</div>
+                <div style={{flex:1,height:5,background:"var(--border-subtle)",borderRadius:3,overflow:"hidden"}}>
+                  <div style={{width:d.share,height:"100%",background:d.color,borderRadius:3}} />
+                </div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,minWidth:60,textAlign:"right"}}>{"투자자 "+d.investors}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:TX,minWidth:60,textAlign:"right"}}>{"지분 "+d.share}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,minWidth:70,textAlign:"right"}}>{"평균 "+d.avg}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{marginTop:12,padding:"8px 12px",background:"rgba(0,212,255,0.05)",border:"0.5px solid rgba(0,212,255,0.2)",borderRadius:6}}>
+            <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,lineHeight:1.8}}>
+              {"💡 "}
+              <span style={{color:AC,fontWeight:600}}>상위 1% 미만이 전체 지분 50% 이상 보유</span>
+              {" — 한국인 테슬라 투자도 양극화. 1인당 평균 78.4주이나 실제 절반 이상은 10~30주 보유. 일론 머스크가 한국인 투자자를 가리켜 "}<span style={{color:TX}}>{"\"Smart people\""}</span>{" 이라 언급한 바 있음."}
+            </div>
+          </div>
+        </div>
+
+
+        {/* ── 섹션 구분: 목표가 ── */}
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0 12px"}}>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:MU,letterSpacing:0.5,whiteSpace:"nowrap"}}>
+            📊 애널리스트 목표주가
+          </div>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
         </div>
 
         {/* 목표가 타임라인 */}
@@ -1670,10 +2473,10 @@ export default function App() {
               <div style={{fontSize:10,color:MU}}>{"공시일 기준 최신순 · 현재가 $"+curPrice.toFixed(2)+" 기준 상승여력"}</div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {[["컨센서스 평균","$404~420",MU],["최고 목표가","$4,600",GR],["최저 목표가","$125",R]].map(([l,v,c],i) => (
+              {[["컨센서스 평균","$395 (33개 기관)",MU],["최고 목표가","$4,600 (ARK)",GR],["최저 목표가","$24.86 (GLJ)",R]].map(([l,v,c],i) => (
                 <div key={i} style={{background:c+"10",border:"1px solid "+c+"30",borderRadius:3,padding:"5px 12px",textAlign:"center"}}>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:MU,letterSpacing:1,marginBottom:2}}>{l}</div>
-                  <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,fontWeight:700,color:c}}>{v}</div>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,letterSpacing:1,marginBottom:2}}>{l}</div>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:13,fontWeight:700,color:c}}>{v}</div>
                 </div>
               ))}
             </div>
@@ -1682,7 +2485,7 @@ export default function App() {
           <div style={{background:"rgba(0,212,255,0.06)",border:"1px solid rgba(0,212,255,0.3)",borderRadius:3,padding:"10px 14px",marginBottom:14,display:"flex",gap:12,alignItems:"flex-start"}}>
             <div style={{fontSize:20,flexShrink:0}}>🔥</div>
             <div>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:AC,letterSpacing:2,marginBottom:4}}>2026.06.05 — JPMORGAN 11년 만의 관점 전환</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:AC,letterSpacing:0.5,marginBottom:4}}>2026.06.05 — JPMORGAN 11년 만의 관점 전환</div>
               <div style={{fontSize:11,color:TX,lineHeight:1.7}}>
                 Ryan Brinkman(2015~, $145 고수) → Rajat Gupta 교체 후 <strong style={{color:AC}}>Underweight → Neutral, $145 → $475 (+228%)</strong>.
                 논거: "TSLA is at the forefront of physical AI" · 수직 통합 재평가 · EPS 2030 $7.50.
@@ -1692,11 +2495,11 @@ export default function App() {
           </div>
           {/* 목표가 테이블 */}
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"'Space Mono',monospace",fontSize:10}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"'Pretendard',sans-serif",fontSize:10}}>
               <thead>
                 <tr style={{borderBottom:"1px solid rgba(227,25,55,.3)"}}>
                   {["공시일","기관","애널리스트","레이팅","목표가","현재가 대비","핵심 논거"].map(h => (
-                    <th key={h} style={{padding:"8px 10px",color:R,textAlign:"left",fontWeight:400,letterSpacing:1,whiteSpace:"nowrap",fontSize:9}}>{h}</th>
+                    <th key={h} style={{padding:"8px 10px",color:R,textAlign:"left",fontWeight:400,letterSpacing:1,whiteSpace:"nowrap",fontSize:12}}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -1705,20 +2508,20 @@ export default function App() {
                   const upside = ((a.tp / curPrice - 1) * 100).toFixed(1);
                   const isUp   = a.tp >= curPrice;
                   return (
-                    <tr key={i} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"rgba(255,255,255,.015)":"transparent"}}>
-                      <td style={{padding:"8px 10px",color:MU,whiteSpace:"nowrap",fontSize:9}}>{a.date}</td>
-                      <td style={{padding:"8px 10px",fontFamily:"'Orbitron',monospace",fontSize:9,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>{a.inst}</td>
-                      <td style={{padding:"8px 10px",color:MU,fontSize:9,whiteSpace:"nowrap"}}>{a.analyst}</td>
+                    <tr key={i} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"var(--card-overlay)":"transparent"}}>
+                      <td style={{padding:"8px 10px",color:MU,whiteSpace:"nowrap",fontSize:12}}>{a.date}</td>
+                      <td style={{padding:"8px 10px",fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:"var(--text-1)",whiteSpace:"nowrap"}}>{a.inst}</td>
+                      <td style={{padding:"8px 10px",color:MU,fontSize:12,whiteSpace:"nowrap"}}>{a.analyst}</td>
                       <td style={{padding:"8px 10px"}}>
-                        <span style={{background:a.color+"15",border:"1px solid "+a.color+"40",color:a.color,fontSize:8,padding:"2px 6px",borderRadius:2,whiteSpace:"nowrap"}}>{a.rating}</span>
+                        <span style={{background:a.color+"15",border:"1px solid "+a.color+"40",color:a.color,fontSize:11,padding:"2px 6px",borderRadius:2,whiteSpace:"nowrap"}}>{a.rating}</span>
                       </td>
-                      <td style={{padding:"8px 10px",fontFamily:"'Orbitron',monospace",fontSize:12,fontWeight:700,color:a.color,whiteSpace:"nowrap"}}>{"$"+a.tp.toLocaleString()}</td>
+                      <td style={{padding:"8px 10px",fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:a.color,whiteSpace:"nowrap"}}>{"$"+a.tp.toLocaleString()}</td>
                       <td style={{padding:"8px 10px",whiteSpace:"nowrap"}}>
-                        <span style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:isUp?GR:R}}>{(isUp?"▲":"▼")+Math.abs(upside)+"%"}</span>
+                        <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:isUp?GR:R}}>{(isUp?"▲":"▼")+Math.abs(upside)+"%"}</span>
                       </td>
                       <td style={{padding:"8px 10px",fontSize:10,color:MU,lineHeight:1.5}}>
                         {a.reason}
-                        {a.badge && <span style={{marginLeft:6,background:"rgba(255,214,0,.15)",border:"1px solid rgba(255,214,0,.4)",color:YL,fontSize:7,padding:"1px 5px",borderRadius:2}}>{a.badge}</span>}
+                        {a.badge && <span style={{marginLeft:6,background:"rgba(251,191,36,.15)",border:"1px solid rgba(255,214,0,.4)",color:YL,fontSize:10,padding:"1px 5px",borderRadius:2}}>{a.badge}</span>}
                       </td>
                     </tr>
                   );
@@ -1732,33 +2535,38 @@ export default function App() {
           </div>
         </div>
 
+        {/* ── 섹션 구분: 기관 매매 ── */}
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"4px 0 12px"}}>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:MU,letterSpacing:0.5,whiteSpace:"nowrap"}}>
+            🏦 기관 매수·매도 동향
+          </div>
+          <div style={{flex:1,height:1,background:"var(--border-subtle)"}} />
+        </div>
+
         {/* 기관 매매 타임라인 */}
         <div style={card}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10,flexWrap:"wrap",gap:7}}>
-            <div style={lbl}>{"기관 투자자 매수·매도 타임라인 ("+instActs.length+"건)"}</div>
+            <div style={lbl}>{"기관 투자자 매수·매도 타임라인 ("+instActs.filter(d=>d.action!=="RATE").length+"건)"}</div>
             <div style={{display:"flex",gap:5}}>
-              {["ALL","BUY","SELL","HOLD","RATE"].map(f => (
+              {["ALL","BUY","SELL","HOLD"].map(f => (
                 <button key={f} style={{...fb(instFil===f),color:instFil===f&&f==="BUY"?GR:instFil===f&&f==="SELL"?R:instFil===f&&f==="RATE"?AC:undefined,borderColor:instFil===f&&f==="BUY"?GR:instFil===f&&f==="SELL"?R:instFil===f&&f==="RATE"?AC:undefined}} onClick={() => setInstFil(f)}>{f}</button>
               ))}
             </div>
           </div>
           {filtInst.map(d => (
-            <div key={d.id} style={{display:"flex",gap:10,padding:"9px 11px",background:"rgba(255,255,255,.02)",borderRadius:3,border:"1px solid "+ACT_C[d.action]+"20",borderLeft:"3px solid "+ACT_C[d.action],marginBottom:6,flexWrap:"wrap",alignItems:"flex-start"}}>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,minWidth:85,flexShrink:0}}>{d.date}</div>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:10,fontWeight:700,color:"#fff",minWidth:110,flexShrink:0}}>{d.inst}</div>
-              <span style={{background:ACT_C[d.action]+"18",border:"1px solid "+ACT_C[d.action]+"40",color:ACT_C[d.action],fontFamily:"'Space Mono',monospace",fontSize:8,padding:"2px 6px",borderRadius:2,flexShrink:0}}>{d.action}</span>
-              <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:"#fff",minWidth:65}}>{d.amt}</div>
-              <span style={{background:SENT_C[d.sent]+"15",border:"1px solid "+SENT_C[d.sent]+"35",color:SENT_C[d.sent],fontFamily:"'Space Mono',monospace",fontSize:8,padding:"2px 5px",borderRadius:2,flexShrink:0}}>{d.sent}</span>
+            <div key={d.id} style={{display:"flex",gap:10,padding:"9px 11px",background:"var(--card-overlay)",borderRadius:3,border:"1px solid "+ACT_C[d.action]+"20",borderLeft:"3px solid "+ACT_C[d.action],marginBottom:6,flexWrap:"wrap",alignItems:"flex-start"}}>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:MU,minWidth:85,flexShrink:0}}>{d.date}</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:"var(--text-1)",minWidth:110,flexShrink:0}}>{d.inst}</div>
+              <span style={{background:ACT_C[d.action]+"18",border:"1px solid "+ACT_C[d.action]+"40",color:ACT_C[d.action],fontFamily:"'Pretendard',sans-serif",fontSize:11,padding:"2px 6px",borderRadius:2,flexShrink:0}}>{d.action}</span>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-1)",minWidth:65}}>{d.amt}</div>
+              <span style={{background:SENT_C[d.sent]+"15",border:"1px solid "+SENT_C[d.sent]+"35",color:SENT_C[d.sent],fontFamily:"'Pretendard',sans-serif",fontSize:11,padding:"2px 5px",borderRadius:2,flexShrink:0}}>{d.sent}</span>
               <div style={{flex:1,fontSize:11,color:MU,lineHeight:1.5,minWidth:130}}>{d.note}</div>
             </div>
           ))}
         </div>
 
-        {/* 리셋 패널 */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:10,marginTop:12}}>
-          <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU,letterSpacing:1}}>{"💾 Storage: "+(storageReady?"연결됨":"로드 중...")}</div>
-          <button onClick={() => guard(resetStorage)} style={{background:"rgba(227,25,55,.08)",border:"1px solid rgba(227,25,55,.3)",color:"rgba(227,25,55,.7)",fontFamily:"'Space Mono',monospace",fontSize:9,padding:"4px 12px",borderRadius:3,cursor:"pointer",letterSpacing:1}}>⟳ 데이터 초기화</button>
-        </div>
+
       </div>
     );
   };
@@ -1767,51 +2575,89 @@ export default function App() {
      RENDER
   ═══════════════════════════════════════ */
   const TABS = [
-    ["company","🏢 컴퍼니"],["ceo","👤 CEO"],["values","💡 가치관"],
-    ["perf","📊 실적"],["roadmap","🚀 로드맵"],["risk","⚠️ 리스크"],
-    ["earnings","🎙 어닝콜"],["xposts","𝕏 X발언"],["ownership","🏦 지분"],
+    ["company","Overview"],["ceo","CEO"],["values","가치관"],
+    ["perf","실적"],["roadmap","로드맵"],["risk","리스크"],
+    ["earnings","어닝콜"],["xposts","X 발언"],["ownership","지분·목표가"],
   ];
 
   const anyLoading = Object.values(ld).some(Boolean) || ldStock;
 
   return (
-    <div style={{background:DK,minHeight:"100vh",color:TX,fontFamily:"'Noto Sans KR',sans-serif"}}>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-      <div style={{position:"fixed",inset:0,backgroundImage:"linear-gradient(rgba(227,25,55,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(227,25,55,.025) 1px,transparent 1px)",backgroundSize:"60px 60px",pointerEvents:"none",zIndex:0}} />
+    <div data-theme={theme} style={{background:"var(--bg)",minHeight:"100vh",color:"var(--text-1)",fontFamily:"'Pretendard','Noto Sans KR',sans-serif"}}>
+      <style>{`
+        :root {
+          --bg: #0B1220;
+          --bg-elev: #131A2B;
+          --bg-card: #1A2236;
+          --border: rgba(255,255,255,0.09);
+          --border-subtle: rgba(255,255,255,0.05);
+          --text-1: #F1F5F9;
+          --text-2: #94A3B8;
+          --text-3: #64748B;
+          --card-overlay: rgba(255,255,255,0.04);
+          --red-tint: rgba(227,25,55,0.06);
+        }
+        [data-theme="light"] {
+          --bg: #F8F9FC;
+          --bg-elev: #FFFFFF;
+          --bg-card: #FFFFFF;
+          --border: #E2E8F0;
+          --border-subtle: #F1F5F9;
+          --text-1: #0F172A;
+          --text-2: #475569;
+          --text-3: #94A3B8;
+          --card-overlay: rgba(0,0,0,0.02);
+          --red-tint: rgba(227,25,55,0.04);
+        }
+        body, #root { background: var(--bg); color: var(--text-1); }
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+        .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+        .reveal.in{opacity:1;transform:translateY(0)}
+        .reveal-fast{opacity:0;transform:translateY(12px);transition:opacity .4s ease,transform .4s ease}
+        .reveal-fast.in{opacity:1;transform:translateY(0)}
+        @keyframes bounce-arrow{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+        .bounce-arrow{animation:bounce-arrow 1.8s ease-in-out infinite}
+        section[id] { scroll-margin-top: 72px; }
+        * { -webkit-font-smoothing: antialiased; word-break: keep-all; overflow-wrap: break-word; }
+      `}</style>
+      {/* ── 스크롤 진행 바 ── */}
+      <div style={{position:"fixed",top:0,left:0,height:3,background:"linear-gradient(90deg,#38BDF8,#FB923C)",width:progress+"%",zIndex:200,transition:"width .1s ease",pointerEvents:"none"}} />
+      <div style={{position:"fixed",inset:0,backgroundImage:"linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px)",backgroundSize:"48px 48px",pointerEvents:"none",zIndex:0}} />
 
       {/* AUTH MODAL */}
       {showAuthModal && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)"}}>
-          <div style={{background:"#141420",border:"2px solid "+R,borderRadius:6,padding:"36px 40px",width:340,boxShadow:"0 0 40px rgba(227,25,55,.3)"}}>
+          <div style={{background:"var(--bg-card)",border:"2px solid "+R,borderRadius:6,padding:"36px 40px",width:340,boxShadow:"0 0 40px rgba(227,25,55,.3)"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:24}}>
               <div style={{width:26,height:26,background:R,clipPath:"polygon(20% 0%,80% 0%,80% 15%,57% 15%,57% 100%,43% 100%,43% 15%,20% 15%)",filter:"drop-shadow(0 0 6px rgba(227,25,55,.7))"}} />
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,fontWeight:900,letterSpacing:4,color:"#fff"}}>TESLA INTEL</div>
+              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:13,fontWeight:900,letterSpacing:4,color:"var(--text-1)"}}>TESLA INTEL</div>
             </div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:R,letterSpacing:3,marginBottom:6}}>ADMIN ACCESS REQUIRED</div>
-            <div style={{fontSize:12,color:"#7070a0",marginBottom:20,lineHeight:1.6}}>AI 업데이트 기능은 관리자 전용입니다.<br/>비밀번호를 입력하세요.</div>
+            <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:R,letterSpacing:0.5,marginBottom:6}}>ADMIN ACCESS REQUIRED</div>
+            <div style={{fontSize:12,color:"var(--text-2)",marginBottom:20,lineHeight:1.6}}>AI 업데이트 기능은 관리자 전용입니다.<br/>비밀번호를 입력하세요.</div>
             {lockoutUntil && Date.now() < lockoutUntil ? (
               <div style={{background:"rgba(227,25,55,.1)",border:"1px solid rgba(227,25,55,.4)",borderRadius:4,padding:"14px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,fontWeight:700,color:R,marginBottom:6}}>{lockRemain+"s"}</div>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:"#7070a0"}}>잠금 해제까지 대기</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:22,fontWeight:700,color:R,marginBottom:6}}>{lockRemain+"s"}</div>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-2)"}}>잠금 해제까지 대기</div>
               </div>
             ) : (
               <>
                 <input type="password" placeholder="비밀번호 입력" value={pwInput}
                   onChange={e => setPwInput(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && verifyPw()} autoFocus
-                  style={{width:"100%",background:"rgba(255,255,255,.05)",border:"1px solid "+(authError?"rgba(227,25,55,.6)":"rgba(255,255,255,.15)"),borderRadius:3,color:"#e8e8f0",padding:"10px 14px",fontFamily:"'Space Mono',monospace",fontSize:13,outline:"none",letterSpacing:3,boxSizing:"border-box",marginBottom:authError?8:16}} />
-                {authError && <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:R,marginBottom:12,letterSpacing:1}}>{authError}</div>}
+                  style={{width:"100%",background:"var(--border-subtle)",border:"1px solid "+(authError?"rgba(227,25,55,.6)":"var(--border)"),borderRadius:3,color:"var(--text-1)",padding:"10px 14px",fontFamily:"'Pretendard',sans-serif",fontSize:13,outline:"none",letterSpacing:0.5,boxSizing:"border-box",marginBottom:authError?8:16}} />
+                {authError && <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:R,marginBottom:12,letterSpacing:1}}>{authError}</div>}
                 <div style={{display:"flex",gap:10}}>
-                  <button onClick={verifyPw} style={{flex:1,background:"rgba(227,25,55,.2)",border:"1px solid "+R,color:R,fontFamily:"'Space Mono',monospace",fontSize:10,letterSpacing:2,padding:"9px",borderRadius:3,cursor:"pointer"}}>확인</button>
+                  <button onClick={verifyPw} style={{flex:1,background:"rgba(227,25,55,.2)",border:"1px solid "+R,color:R,fontFamily:"'Pretendard',sans-serif",fontSize:10,letterSpacing:0.5,padding:"9px",borderRadius:3,cursor:"pointer"}}>확인</button>
                   <button onClick={() => { setShowAuthModal(false); setPwInput(""); setAuthError(""); pendingRef.current = null; }}
-                    style={{flex:1,background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:"#7070a0",fontFamily:"'Space Mono',monospace",fontSize:10,padding:"9px",borderRadius:3,cursor:"pointer"}}>취소</button>
+                    style={{flex:1,background:"transparent",border:"1px solid rgba(255,255,255,.15)",color:"var(--text-2)",fontFamily:"'Pretendard',sans-serif",fontSize:10,padding:"9px",borderRadius:3,cursor:"pointer"}}>취소</button>
                 </div>
               </>
             )}
             {attempts > 0 && !lockoutUntil && (
               <div style={{display:"flex",gap:4,justifyContent:"center",marginTop:14}}>
                 {Array.from({length:MAX_ATTEMPTS}).map((_,i) => (
-                  <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<attempts?R:"rgba(255,255,255,.1)"}} />
+                  <div key={i} style={{width:8,height:8,borderRadius:"50%",background:i<attempts?R:"var(--border)"}} />
                 ))}
               </div>
             )}
@@ -1820,88 +2666,266 @@ export default function App() {
       )}
 
       {/* HEADER */}
-      <div ref={hdrRef} style={{background:"rgba(5,5,8,.97)",borderBottom:"1px solid "+BD,padding:"13px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50}}>
+      <div ref={hdrRef} style={{background:"var(--bg)",borderBottom:"0.5px solid rgba(255,255,255,0.08)",padding:isMobile?"10px 14px":"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50}}>
         <div style={{display:"flex",alignItems:"center",gap:11}}>
           <div style={{width:30,height:30,background:R,clipPath:"polygon(20% 0%,80% 0%,80% 15%,57% 15%,57% 100%,43% 100%,43% 15%,20% 15%)",filter:"drop-shadow(0 0 7px rgba(227,25,55,.7))"}} />
           <div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:15,fontWeight:900,letterSpacing:5,color:"#fff"}}>TESLA INTELLIGENCE HUB</div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:2,color:MU,marginTop:1}}>AI-POWERED · v5.0 · Storage 연동 · 주가 실시간</div>
+            <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?13:15,fontWeight:800,letterSpacing:isMobile?0:1,color:"var(--text-1)"}}>{isMobile?"Tesla Hub":"Tesla Intelligence Hub"}</div>
+            {!isMobile && <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,marginTop:1}}>EDGAR 실적 연동 · Yahoo Finance · by Rich Researcher</div>}
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          {/* 잠금 배지 */}
-          <div onClick={() => authUnlocked ? setAuthUnlocked(false) : setShowAuthModal(true)}
-            style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",background:authUnlocked?"rgba(0,230,118,.1)":"rgba(227,25,55,.1)",border:"1px solid "+(authUnlocked?"rgba(0,230,118,.4)":"rgba(227,25,55,.3)"),borderRadius:3,padding:"5px 10px"}}>
-            <span style={{fontSize:11}}>{authUnlocked ? "🔓" : "🔒"}</span>
-            <span style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:authUnlocked?GR:R,letterSpacing:1}}>{authUnlocked?"ADMIN":"LOCKED"}</span>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          {/* 주가 칩 */}
+          <div style={{display:"flex",alignItems:"center",gap:6,fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700}}>
+            <span style={{color:"var(--text-1)"}}>{"$"+stock.price.toFixed(2)}</span>
+            <span style={{fontSize:11,fontWeight:600,color:priceDiff.up?"#10b981":"#ef4444",background:priceDiff.up?"rgba(16,185,129,0.12)":"rgba(239,68,68,0.12)",padding:"2px 7px",borderRadius:8}}>
+              {(priceDiff.up?"▲ +":"▼ ")+priceDiff.p+"%"}
+            </span>
           </div>
-          {/* 주가 업데이트 버튼 */}
-          <button onClick={() => guard(updateStock)} disabled={ldStock}
-            style={{display:"flex",alignItems:"center",gap:5,background:ldStock?"rgba(0,212,255,.05)":"rgba(0,212,255,.1)",border:"1px solid rgba(0,212,255,.4)",color:AC,fontFamily:"'Space Mono',monospace",fontSize:8,letterSpacing:1,padding:"5px 10px",borderRadius:3,cursor:ldStock?"not-allowed":"pointer"}}>
-            {ldStock ? <><span style={{animation:"spin 1s linear infinite",display:"inline-block"}}>◌</span>{" 조회중"}</> : <>{"📈 주가 업데이트"}</>}
+          {/* 다크/라이트 토글 */}
+          <button onClick={toggleTheme}
+            style={{width:36,height:36,borderRadius:10,background:"transparent",border:"1px solid var(--border)",color:"var(--text-1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+            {theme === "dark" ? "☀️" : "🌙"}
           </button>
-          {/* 전체 AI 업데이트 */}
-          <button onClick={() => guard(updateAll)} disabled={anyLoading}
-            style={{display:"flex",alignItems:"center",gap:6,background:"rgba(227,25,55,.15)",border:"1px solid rgba(227,25,55,.5)",color:R,fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:1,padding:"6px 14px",borderRadius:3,cursor:anyLoading?"not-allowed":"pointer"}}>
-            {anyLoading ? <><span style={{animation:"spin 1s linear infinite",display:"inline-block"}}>◌</span>{" 업데이트 중..."}</> : <><span>✦</span>{" 전체 AI 업데이트"}</>}
+          {/* ≡ 드로어 메뉴 */}
+          <button onClick={() => setDrawerOpen(true)}
+            style={{width:36,height:36,borderRadius:10,background:"transparent",border:"1px solid var(--border)",color:"var(--text-1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+            ☰
           </button>
           {/* 저장 토스트 */}
           {saveToast && (
-            <div style={{background:saveToast.ok?"rgba(0,230,118,.15)":"rgba(227,25,55,.15)",border:"1px solid "+(saveToast.ok?"rgba(0,230,118,.5)":"rgba(227,25,55,.5)"),color:saveToast.ok?GR:R,fontFamily:"'Space Mono',monospace",fontSize:8,padding:"4px 10px",borderRadius:3,letterSpacing:1}}>
+            <div style={{background:saveToast.ok?"rgba(16,185,129,.15)":"rgba(227,25,55,.15)",border:"1px solid "+(saveToast.ok?"rgba(16,185,129,.5)":"rgba(227,25,55,.5)"),color:saveToast.ok?GR:R,fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:600,padding:"6px 14px",borderRadius:20}}>
               {saveToast.ok ? "💾 "+saveToast.msg : "⚠ "+saveToast.msg}
             </div>
           )}
-          {/* 방문자 카운터 배지 */}
-          {visitors.total > 0 && (
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <div style={{display:"flex",alignItems:"center",gap:5,
-                background:"rgba(255,255,255,0.04)",
-                border:"1px solid rgba(255,255,255,0.1)",
-                borderRadius:3,padding:"4px 10px"}}>
-                <span style={{fontSize:10}}>👁</span>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:MU,letterSpacing:1}}>
-                  <span style={{color:TX,fontWeight:700}}>{visitors.today.toLocaleString()}</span>
-                  <span style={{color:MU}}> 오늘</span>
-                </div>
-                <div style={{width:1,height:10,background:"rgba(255,255,255,0.15)"}} />
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:8,color:MU,letterSpacing:1}}>
-                  <span style={{color:AC,fontWeight:700}}>{visitors.total.toLocaleString()}</span>
-                  <span style={{color:MU}}> 총</span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div style={{fontFamily:"'Space Mono',monospace",fontSize:9,color:MU}}>{"TSLA · "+stock.date}</div>
         </div>
       </div>
 
-      {/* TAB NAV */}
-      <div style={{background:"rgba(13,13,18,.97)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(227,25,55,.2)",display:"flex",overflowX:"auto",scrollbarWidth:"none",position:"sticky",top:hdrH,zIndex:49}}>
-        {TABS.map(([v,l]) => (
-          <button key={v} onClick={() => { setMainTab(v); window.scrollTo({top:0,behavior:"smooth"}); }}
-            style={{fontFamily:"'Space Mono',monospace",fontSize:9,letterSpacing:1,padding:"11px 14px",border:"none",borderBottom:"2px solid "+(mainTab===v?R:"transparent"),background:mainTab===v?"rgba(227,25,55,.07)":"transparent",color:mainTab===v?R:MU,cursor:"pointer",whiteSpace:"nowrap",transition:"all .2s"}}>{l}</button>
+      {/* ── 컴팩트 섹션 네비탭 ── */}
+      <div style={{position:"sticky",top:hdrH,zIndex:49,background:"var(--bg)",borderBottom:"1px solid var(--border)",overflowX:"auto",scrollbarWidth:"none",display:"flex"}}>
+        {[["#section-news","뉴스"],["#section-overview","Overview"],["#section-ceo","CEO"],["#section-perf","실적"],["#section-roadmap","로드맵"],["#section-risk","리스크"],["#section-earnings","어닝콜"],["#section-xposts","X 발언"],["#section-ownership","지분"]].map(([href,label]) => (
+          <a key={href} href={href}
+            onClick={e=>{e.preventDefault();const el=document.querySelector(href);if(el)el.scrollIntoView({behavior:"smooth"});}}
+            style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:activeSection===href.slice(1)?700:500,color:activeSection===href.slice(1)?"var(--text-1)":"var(--text-2)",padding:isMobile?"9px 12px":"9px 16px",whiteSpace:"nowrap",textDecoration:"none",borderBottom:"2px solid "+(activeSection===href.slice(1)?"#E31937":"transparent"),display:"inline-block",flexShrink:0,transition:"color .2s, border-color .2s"}}>
+            {label}
+          </a>
         ))}
       </div>
 
-      {/* CONTENT */}
-      <div style={{position:"relative",zIndex:1,maxWidth:1400,margin:"0 auto",padding:"24px 20px 60px"}}>
-        {mainTab === "company"   && <CompanyTab />}
-        {mainTab === "ceo"       && <CeoTab />}
-        {mainTab === "values"    && <ValuesTab />}
-        {mainTab === "perf"      && <PerfTab />}
-        {mainTab === "roadmap"   && <RoadmapTab />}
-        {mainTab === "risk"      && <RiskTab />}
-        {mainTab === "earnings"  && <EarningsTab />}
-        {mainTab === "xposts"    && <XTab />}
-        {mainTab === "ownership" && <OwnershipTab />}
+      {/* ── 드로어 백드롭 ── */}
+      {drawerOpen && (
+        <div onClick={() => setDrawerOpen(false)}
+          style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:90,backdropFilter:"blur(4px)"}} />
+      )}
+
+      {/* ── 드로어 패널 ── */}
+      <div style={{position:"fixed",top:0,right:0,bottom:0,width:isMobile?"80%":"320px",maxWidth:320,background:"var(--bg-elev)",borderLeft:"1px solid var(--border)",transform:drawerOpen?"translateX(0)":"translateX(100%)",transition:"transform .3s ease",zIndex:95,display:"flex",flexDirection:"column",overflowY:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"20px 20px 16px"}}>
+          <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:"var(--text-3)"}}>SECTIONS</div>
+          <button onClick={() => setDrawerOpen(false)}
+            style={{width:32,height:32,borderRadius:8,background:"transparent",border:"1px solid var(--border)",color:"var(--text-1)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+        <div style={{flex:1}}>
+          {[["section-news","00","📰 뉴스"],["section-overview","01","Overview"],["section-ceo","02","CEO"],["section-values","03","가치관"],["section-perf","04","실적"],["section-roadmap","05","로드맵"],["section-risk","06","리스크"],["section-earnings","07","어닝콜"],["section-xposts","08","X 발언"],["section-ownership","09","지분·목표가"]].map(([id,num,label]) => (
+            <a key={id} href={"#"+id} onClick={(e)=>{e.preventDefault();setDrawerOpen(false);const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth"});}}
+              style={{display:"flex",alignItems:"center",gap:14,padding:"16px 20px",borderBottom:"1px solid var(--border)",color:"var(--text-1)",textDecoration:"none",fontSize:15,fontWeight:500,fontFamily:"'Pretendard',sans-serif",cursor:"pointer"}}>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"var(--text-3)",minWidth:24}}>{num}</span>
+              {label}
+            </a>
+          ))}
+        </div>
+        {visitors.total > 0 && (
+          <div style={{padding:"16px 20px",borderTop:"1px solid var(--border)",display:"flex",gap:16,fontFamily:"'Pretendard',sans-serif",fontSize:12,color:"var(--text-3)"}}>
+            <span>{"👁 오늘 "}<strong style={{color:"var(--text-1)"}}>{visitors.today}</strong></span>
+            <span>{"총 "}<strong style={{color:AC}}>{visitors.total}</strong></span>
+          </div>
+        )}
+      </div>
+
+      {/* CONTENT — 단일 스크롤 섹션 */}
+      <div style={{position:"relative",zIndex:1,maxWidth:isMobile?"100%":800,margin:"0 auto"}}>
+
+        {/* ── HERO 섹션 ── */}
+        <div style={{padding:isMobile?"28px 16px 32px":"40px 24px 48px",borderBottom:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 600px 300px at 50% 0%, rgba(227,25,55,0.08), transparent)",pointerEvents:"none"}} />
+          <div style={{position:"relative"}}>
+            {/* 아이브로 레이블 */}
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:600,color:AC,letterSpacing:"0.08em",marginBottom:16,padding:"6px 14px",borderRadius:100,border:"1px solid rgba(56,189,248,.25)",background:"rgba(56,189,248,.06)"}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:AC,animation:"pulse 2s ease-in-out infinite"}} />
+              {"TSLA · NASDAQ · "+stock.date}
+            </div>
+            {/* 메인 타이틀 */}
+            <h1 style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?"clamp(28px,7vw,36px)":40,fontWeight:800,lineHeight:1.2,letterSpacing:"-0.03em",marginBottom:12,color:"var(--text-1)"}}>
+              Tesla Intelligence<br/>
+              <span style={{background:"linear-gradient(180deg, var(--text-1) 30%, #38BDF8 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Hub</span>
+            </h1>
+            <p style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?14:15,color:"var(--text-2)",lineHeight:1.6,marginBottom:20}}>
+              SEC EDGAR · Yahoo Finance · by Rich Researcher
+            </p>
+            <Countdown />
+            {/* 주가 + 등락 */}
+            <div style={{display:"flex",alignItems:"baseline",gap:12,marginBottom:24}}>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:isMobile?36:44,fontWeight:700,color:"var(--text-1)",letterSpacing:"-0.02em"}}>{"$"+stock.price.toFixed(2)}</span>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:16,fontWeight:600,color:priceDiff.up?"#10b981":"#ef4444",background:priceDiff.up?"rgba(16,185,129,0.12)":"rgba(239,68,68,0.12)",padding:"4px 10px",borderRadius:8}}>
+                {(priceDiff.up?"▲ +":"▼ ")+priceDiff.p+"%"}
+              </span>
+            </div>
+            {/* Hero KPI 그리드 */}
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10}}>
+              {[
+                {label:"시가총액",value:mktCap,sub:"2026.06"},
+                {label:"총이익률",value:"21.1%",sub:"Q1'26"},
+                {label:"다음 실적",value:"7/22",sub:"Q2'26 컨센 $0.45"},
+                {label:"기준일",value:stock.date.slice(5),sub:"Yahoo Finance"},
+              ].map((k,i) => (
+                <div key={i} style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px"}}>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"var(--text-2)",marginBottom:6,fontWeight:500}}>{k.label}</div>
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:isMobile?16:18,fontWeight:700,color:"var(--text-1)"}}>{k.value}</div>
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)",marginTop:4}}>{k.sub}</div>
+                </div>
+              ))}
+            </div>
+            {/* 긴급뉴스 배너 (임팩트5) */}
+            {breakingNews.length > 0 && (
+              <div style={{marginTop:16,padding:"10px 14px",background:"rgba(227,25,55,.08)",
+                border:"1px solid rgba(227,25,55,.3)",borderRadius:10}}>
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,
+                  color:R,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>
+                  🔴 오늘의 긴급 뉴스
+                </div>
+                {breakingNews.slice(0,2).map((n,i) => (
+                  <div key={i} style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?12:13,
+                    color:"var(--text-1)",lineHeight:1.5,marginBottom:i<breakingNews.length-1?6:0,
+                    paddingBottom:i<breakingNews.length-1?6:0,
+                    borderBottom:i<breakingNews.length-1?"0.5px solid rgba(227,25,55,.2)":"none"}}>
+                    <span style={{color:R,marginRight:6}}>▸</span>{n.titleKo}
+                  </div>
+                ))}
+                <a href="#section-news" onClick={e=>{e.preventDefault();document.getElementById("section-news")?.scrollIntoView({behavior:"smooth"});}}
+                  style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,
+                    textDecoration:"none",display:"inline-block",marginTop:6}}>
+                  전체 뉴스 보기 →
+                </a>
+              </div>
+            )}
+            {/* 스크롤 힌트 화살표 */}
+            <div style={{textAlign:"center",marginTop:24}}>
+              <span className="bounce-arrow" style={{display:"inline-block",fontSize:20,color:"var(--text-3)"}}>↓</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── 각 섹션 ── */}
+        <div style={{padding:isMobile?"0 0 60px":"0 0 80px"}}>
+          <section id="section-news" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>00</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>NEWS</span>
+              </div>
+              <NewsTab />
+            </div>
+          </section>
+          <section id="section-overview" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>01</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>Overview</span>
+              </div>
+              <CompanyTab />
+            </div>
+          </section>
+          <section id="section-ceo" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>02</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>CEO</span>
+              </div>
+              <CeoTab />
+            </div>
+          </section>
+          <section id="section-values" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>03</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>가치관</span>
+              </div>
+              <ValuesTab />
+            </div>
+          </section>
+          <section id="section-perf" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>04</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>실적</span>
+              </div>
+              <PerfTab />
+            </div>
+          </section>
+          <section id="section-roadmap" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>05</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>로드맵</span>
+              </div>
+              <RoadmapTab />
+            </div>
+          </section>
+          <section id="section-risk" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>06</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>리스크</span>
+              </div>
+              <RiskTab />
+            </div>
+          </section>
+          <section id="section-earnings" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>07</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>어닝콜</span>
+              </div>
+              <EarningsTab />
+            </div>
+          </section>
+          <section id="section-xposts" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>08</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>X 발언</span>
+              </div>
+              <XTab />
+            </div>
+          </section>
+          <section id="section-ownership" style={{padding:isMobile?"24px 16px":"32px 24px"}}>
+            <div className="reveal">
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>09</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}} />
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>지분·목표가</span>
+              </div>
+              <OwnershipTab />
+            </div>
+          </section>
+        </div>
 
         {/* UPDATE LOG */}
         {updateHistory.length > 0 && (
-          <div style={{...card,marginTop:20,borderColor:"rgba(0,212,255,.2)"}}>
+          <div style={{...card,marginTop:20,borderColor:"rgba(56,189,248,.2)"}}>
             <div style={{...lbl,color:AC}}>{"AI 업데이트 로그 (최근 "+updateHistory.length+"건)"}</div>
             <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:8}}>
               {updateHistory.map((h,i) => (
-                <div key={i} style={{display:"flex",gap:10,padding:"4px 8px",background:"rgba(255,255,255,.02)",borderRadius:3,fontSize:9,fontFamily:"'Space Mono',monospace",alignItems:"center"}}>
+                <div key={i} style={{display:"flex",gap:10,padding:"4px 8px",background:"var(--card-overlay)",borderRadius:3,fontSize:12,fontFamily:"'Pretendard',sans-serif",alignItems:"center"}}>
                   <span style={{color:h.ok?GR:R,flexShrink:0}}>{h.ok?"✓":"✗"}</span>
                   <span style={{color:MU,flexShrink:0,minWidth:130}}>{h.time}</span>
                   <span style={{color:AC,flexShrink:0}}>{"["+h.key+"]"}</span>
@@ -1913,23 +2937,26 @@ export default function App() {
         )}
       </div>
 
-      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"16px 12px 12px",fontFamily:"'Space Mono',monospace",fontSize:8,color:"rgba(255,255,255,.15)",borderTop:"1px solid rgba(227,25,55,.12)",letterSpacing:2}}>
-        {visitors.total > 0 && (
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:8,fontFamily:"'Space Mono',monospace",fontSize:9}}>
+      <div style={{position:"relative",zIndex:1,textAlign:"center",padding:"16px 12px 12px",fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"var(--border)",borderTop:"1px solid rgba(227,25,55,.12)",letterSpacing:0.5}}>
+        {(
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:16,marginBottom:8,fontFamily:"'Pretendard',sans-serif",fontSize:12}}>
             <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:3,padding:"5px 14px"}}>
               <span style={{color:MU}}>오늘 방문</span>
-              <span style={{color:TX,fontWeight:700,fontFamily:"'Orbitron',monospace",fontSize:11}}>{visitors.today.toLocaleString()}</span>
+              <span style={{color:TX,fontWeight:700,fontFamily:"'Pretendard',sans-serif",fontSize:11}}>{visitors.today.toLocaleString()}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(0,212,255,0.05)",border:"1px solid rgba(0,212,255,0.15)",borderRadius:3,padding:"5px 14px"}}>
               <span style={{color:MU}}>누적 방문</span>
-              <span style={{color:AC,fontWeight:700,fontFamily:"'Orbitron',monospace",fontSize:11}}>{visitors.total.toLocaleString()}</span>
+              <span style={{color:AC,fontWeight:700,fontFamily:"'Pretendard',sans-serif",fontSize:11}}>{visitors.total.toLocaleString()}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:4,color:MU}}>
-              <span style={{fontSize:7,color:"rgba(255,255,255,0.2)"}}>※ 세션 중복 제외 · Artifact Storage (공유)</span>
+              <span style={{fontSize:10,color:"var(--border)"}}>※ 세션 중복 제외 · Artifact Storage (공유)</span>
             </div>
           </div>
         )}
-        TESLA INTELLIGENCE HUB v5.0 · SEC 8-K/10-Q/13F · X POSTS · NOT FINANCIAL ADVICE
+        <div style={{marginBottom:6,fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"var(--border)",letterSpacing:1}}>
+          © 2026 <span style={{color:"rgba(255,255,255,0.45)",fontWeight:600}}>Rich Researcher</span> · Tesla Intelligence Hub
+        </div>
+        TESLA INTELLIGENCE HUB v5.0 · SEC EDGAR · YAHOO FINANCE · NOT FINANCIAL ADVICE
       </div>
     </div>
   );
