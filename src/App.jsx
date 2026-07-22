@@ -732,7 +732,7 @@ export default function App() {
   /* ── tabs ── */
   const [mainTab, setMainTab]   = useState("company");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("section-news");
+  const [activeSection, setActiveSection] = useState("section-overview");
   const [news, setNews]         = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsFilter, setNewsFilter]   = useState("전체");
@@ -1098,14 +1098,98 @@ const NewsTab = () => {
   const [expanded, setExpanded] = useState({});
   const toggle = id => setExpanded(p => ({...p, [id]:!p[id]}));
 
+  /* ── 더보기 페이지네이션 + 날짜별 그룹 접기 상태 ── */
+  const CARD_INITIAL = 5, CARD_STEP = 10;
+  const [flatVisibleCount, setFlatVisibleCount] = useState(CARD_INITIAL);
+  const [groupVisibleCounts, setGroupVisibleCounts] = useState({});
+  const [toggledDates, setToggledDates] = useState(() => new Set());
+  useEffect(() => {
+    setFlatVisibleCount(CARD_INITIAL);
+    setGroupVisibleCounts({});
+    setToggledDates(new Set());
+  }, [newsFilter, newsDay]);
+  const toggleDateGroup = date => setToggledDates(prev => {
+    const next = new Set(prev);
+    next.has(date) ? next.delete(date) : next.add(date);
+    return next;
+  });
+
   const filteredNews = news.filter(n => {
     const catOk  = newsFilter === "전체" || n.category === newsFilter;
     const dateOk = newsDay === 0 || n.date === newsDates[newsDay];
     return catOk && dateOk;
   });
 
+  /* 날짜별 그룹 (filteredNews는 이미 날짜desc→임팩트desc 정렬 상태라 재정렬 불필요) */
+  const groupedByDate = useMemo(() => {
+    const map = new Map();
+    filteredNews.forEach(n => {
+      if (!map.has(n.date)) map.set(n.date, []);
+      map.get(n.date).push(n);
+    });
+    return [...map.entries()];
+  }, [filteredNews]);
+
   const todayCount  = news.filter(n => n.date === newsDates[0]).length;
   const totalCount  = news.length;
+
+  const renderCard = n => (
+    <div key={n.id} style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",
+      borderLeft:"3px solid "+(n.impact===5?R:n.impact===4?"#fb923c":n.impact===3?YL:"var(--border)")}}>
+      {/* 카드 헤더 */}
+      <div style={{padding:"12px 14px",cursor:"pointer"}} onClick={()=>toggle(n.id)}>
+        {/* 태그 행 */}
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7,alignItems:"center"}}>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,
+            color:n.impact>=4?R:n.impact===3?YL:"var(--text-3)"}}>{IMPACT_LABEL[n.impact]||"⚪"}</span>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:600,
+            background:CAT_COLOR[n.category]||CAT_COLOR["기타"],
+            color:"var(--text-1)",padding:"1px 7px",borderRadius:10}}>{n.category}</span>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,
+            color:SENT_COLOR[n.sentiment]||MU,fontWeight:600}}>
+            {n.sentiment==="bullish"?"↑긍정":n.sentiment==="bearish"?"↓부정":"→중립"}
+          </span>
+          <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)",marginLeft:"auto"}}>{n.source}</span>
+        </div>
+        {/* 제목 */}
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?13:14,fontWeight:700,
+          color:"var(--text-1)",lineHeight:1.4,marginBottom:6}}>{n.titleKo}</div>
+        {/* 요약 */}
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:"var(--text-2)",
+          lineHeight:1.7,
+          display:expanded[n.id]?"block":"-webkit-box",
+          WebkitLineClamp:expanded[n.id]?999:3,
+          WebkitBoxOrient:"vertical",
+          overflow:"hidden"}}>{n.summaryKo}</div>
+        {/* 펼치기 */}
+        <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,marginTop:4,cursor:"pointer"}}>
+          {expanded[n.id]?"▲ 접기":"▼ 전문 보기"}
+        </div>
+      </div>
+      {/* 카드 푸터 */}
+      <div style={{padding:"6px 14px 8px",borderTop:"0.5px solid var(--border-subtle)",
+        display:"flex",justifyContent:"space-between",alignItems:"center",
+        background:"var(--card-overlay)"}}>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"var(--text-3)"}}>
+          {n.date} {n.collectedAt ? new Date(n.collectedAt).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" KST" : ""}
+        </span>
+        {n.sourceUrl && (
+          <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer"
+            style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,textDecoration:"none",fontWeight:600}}>
+            원문 보기 →
+          </a>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderLoadMore = (remaining, onClick) => (
+    <button onClick={onClick} style={{display:"block",width:"100%",margin:"10px 0 2px",padding:"9px 16px",
+      borderRadius:10,border:"1px solid var(--border)",background:"transparent",color:AC,
+      fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:600,cursor:"pointer"}}>
+      {"더 보기 (+"+Math.min(CARD_STEP, remaining)+"건)"}
+    </button>
+  );
 
   return (
     <div>
@@ -1124,17 +1208,20 @@ const NewsTab = () => {
         ))}
       </div>
 
-      {/* 날짜 필터 */}
+      {/* 날짜 필터 — 기사가 1건도 없는 날짜(예: 옛날 초기 테스트 잔재)는 목록에서 제외 */}
       <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none",marginBottom:14,paddingBottom:2}}>
-        {["전체 기간", ...newsDates.slice(0,7)].map((d,i) => (
-          <button key={i} onClick={()=>setNewsDay(i===0?0:i-1)}
-            style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:newsDay===(i===0?0:i-1)?700:400,
-              padding:"4px 12px",borderRadius:20,border:"1px solid "+(newsDay===(i===0?0:i-1)?AC:"var(--border)"),
-              background:newsDay===(i===0?0:i-1)?"rgba(56,189,248,.1)":"transparent",
-              color:newsDay===(i===0?0:i-1)?AC:"var(--text-2)",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
-            {i===0 ? "전체 기간" : (d===newsDates[0]?"오늘 "+d.slice(5):d.slice(5))}
-          </button>
-        ))}
+        {["전체 기간", ...newsDates.filter(d => news.some(n => n.date === d)).slice(0,7)].map((d,i) => {
+          const dIdx = i===0 ? 0 : newsDates.indexOf(d);
+          return (
+            <button key={i} onClick={()=>setNewsDay(dIdx)}
+              style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:newsDay===dIdx?700:400,
+                padding:"4px 12px",borderRadius:20,border:"1px solid "+(newsDay===dIdx?AC:"var(--border)"),
+                background:newsDay===dIdx?"rgba(56,189,248,.1)":"transparent",
+                color:newsDay===dIdx?AC:"var(--text-2)",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>
+              {i===0 ? "전체 기간" : (d===newsDates[0]?"오늘 "+d.slice(5):d.slice(5))}
+            </button>
+          );
+        })}
       </div>
 
       {/* 로딩 */}
@@ -1164,58 +1251,44 @@ const NewsTab = () => {
         </div>
       )}
 
-      {/* 뉴스 카드 목록 */}
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {filteredNews.map(n => (
-          <div key={n.id} style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:12,overflow:"hidden",
-            borderLeft:"3px solid "+(n.impact===5?R:n.impact===4?"#fb923c":n.impact===3?YL:"var(--border)")}}>
-            {/* 카드 헤더 */}
-            <div style={{padding:"12px 14px",cursor:"pointer"}} onClick={()=>toggle(n.id)}>
-              {/* 태그 행 */}
-              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:7,alignItems:"center"}}>
-                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,
-                  color:n.impact>=4?R:n.impact===3?YL:"var(--text-3)"}}>{IMPACT_LABEL[n.impact]||"⚪"}</span>
-                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:600,
-                  background:CAT_COLOR[n.category]||CAT_COLOR["기타"],
-                  color:"var(--text-1)",padding:"1px 7px",borderRadius:10}}>{n.category}</span>
-                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,
-                  color:SENT_COLOR[n.sentiment]||MU,fontWeight:600}}>
-                  {n.sentiment==="bullish"?"↑긍정":n.sentiment==="bearish"?"↓부정":"→중립"}
+      {/* 뉴스 카드 목록 — 특정 날짜 선택: 더보기 페이지네이션만 / 전체 기간: 날짜별 그룹 접기 + 그룹별 더보기 */}
+      {newsDay !== 0 ? (
+        <>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {filteredNews.slice(0, flatVisibleCount).map(renderCard)}
+          </div>
+          {flatVisibleCount < filteredNews.length &&
+            renderLoadMore(filteredNews.length - flatVisibleCount, () => setFlatVisibleCount(c => c + CARD_STEP))}
+        </>
+      ) : (
+        groupedByDate.map(([date, items], gi) => {
+          const isDefaultOpen = gi === 0; // 가장 최신 날짜만 기본 펼침
+          const isOpen = toggledDates.has(date) ? !isDefaultOpen : isDefaultOpen;
+          const shown = groupVisibleCounts[date] ?? CARD_INITIAL;
+          return (
+            <div key={date} style={{marginBottom:10}}>
+              <button onClick={()=>toggleDateGroup(date)} style={{width:"100%",display:"flex",
+                justifyContent:"space-between",alignItems:"center",padding:"10px 14px",
+                background:"var(--card-overlay)",border:"1px solid var(--border)",borderRadius:10,
+                cursor:"pointer",fontFamily:"'JetBrains Mono',monospace"}}>
+                <span style={{fontSize:12,fontWeight:700,color:"var(--text-1)"}}>
+                  {(date===newsDates[0]?"오늘 "+date.slice(5):date.slice(5))+" · "+items.length+"건"}
                 </span>
-                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)",marginLeft:"auto"}}>{n.source}</span>
-              </div>
-              {/* 제목 */}
-              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:isMobile?13:14,fontWeight:700,
-                color:"var(--text-1)",lineHeight:1.4,marginBottom:6}}>{n.titleKo}</div>
-              {/* 요약 */}
-              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:"var(--text-2)",
-                lineHeight:1.7,
-                display:expanded[n.id]?"block":"-webkit-box",
-                WebkitLineClamp:expanded[n.id]?999:3,
-                WebkitBoxOrient:"vertical",
-                overflow:"hidden"}}>{n.summaryKo}</div>
-              {/* 펼치기 */}
-              <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,marginTop:4,cursor:"pointer"}}>
-                {expanded[n.id]?"▲ 접기":"▼ 전문 보기"}
-              </div>
-            </div>
-            {/* 카드 푸터 */}
-            <div style={{padding:"6px 14px 8px",borderTop:"0.5px solid var(--border-subtle)",
-              display:"flex",justifyContent:"space-between",alignItems:"center",
-              background:"var(--card-overlay)"}}>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"var(--text-3)"}}>
-                {n.date} {n.collectedAt ? new Date(n.collectedAt).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"})+" KST" : ""}
-              </span>
-              {n.sourceUrl && (
-                <a href={n.sourceUrl} target="_blank" rel="noopener noreferrer"
-                  style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:AC,textDecoration:"none",fontWeight:600}}>
-                  원문 보기 →
-                </a>
+                <span style={{fontSize:11,color:"var(--text-3)"}}>{isOpen?"▲ 접기":"▼ 펼치기"}</span>
+              </button>
+              {isOpen && (
+                <>
+                  <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:8}}>
+                    {items.slice(0, shown).map(renderCard)}
+                  </div>
+                  {shown < items.length &&
+                    renderLoadMore(items.length - shown, () => setGroupVisibleCounts(p => ({...p, [date]: shown + CARD_STEP})))}
+                </>
               )}
             </div>
-          </div>
-        ))}
-      </div>
+          );
+        })
+      )}
 
       {/* 통계 */}
       {!newsLoading && (
@@ -2703,7 +2776,7 @@ const CompanyTab = () => {
 
       {/* ── 컴팩트 섹션 네비탭 ── */}
       <div style={{position:"sticky",top:hdrH,zIndex:49,background:"var(--bg)",borderBottom:"1px solid var(--border)",overflowX:"auto",scrollbarWidth:"none",display:"flex"}}>
-        {[["#section-news","뉴스"],["#section-overview","Overview"],["#section-ceo","CEO"],["#section-perf","실적"],["#section-roadmap","로드맵"],["#section-risk","리스크"],["#section-earnings","어닝콜"],["#section-xposts","X 발언"],["#section-ownership","지분"]].map(([href,label]) => (
+        {[["#section-overview","Overview"],["#section-news","뉴스"],["#section-ceo","CEO"],["#section-perf","실적"],["#section-roadmap","로드맵"],["#section-risk","리스크"],["#section-earnings","어닝콜"],["#section-xposts","X 발언"],["#section-ownership","지분"]].map(([href,label]) => (
           <a key={href} href={href}
             onClick={e=>{e.preventDefault();const el=document.querySelector(href);if(el)el.scrollIntoView({behavior:"smooth"});}}
             style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:activeSection===href.slice(1)?700:500,color:activeSection===href.slice(1)?"var(--text-1)":"var(--text-2)",padding:isMobile?"9px 12px":"9px 16px",whiteSpace:"nowrap",textDecoration:"none",borderBottom:"2px solid "+(activeSection===href.slice(1)?"#E31937":"transparent"),display:"inline-block",flexShrink:0,transition:"color .2s, border-color .2s"}}>
@@ -2726,7 +2799,7 @@ const CompanyTab = () => {
             style={{width:32,height:32,borderRadius:8,background:"transparent",border:"1px solid var(--border)",color:"var(--text-1)",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
         <div style={{flex:1}}>
-          {[["section-news","00","📰 뉴스"],["section-overview","01","Overview"],["section-ceo","02","CEO"],["section-values","03","가치관"],["section-perf","04","실적"],["section-roadmap","05","로드맵"],["section-risk","06","리스크"],["section-earnings","07","어닝콜"],["section-xposts","08","X 발언"],["section-ownership","09","지분·목표가"]].map(([id,num,label]) => (
+          {[["section-overview","00","Overview"],["section-news","01","📰 뉴스"],["section-ceo","02","CEO"],["section-values","03","가치관"],["section-perf","04","실적"],["section-roadmap","05","로드맵"],["section-risk","06","리스크"],["section-earnings","07","어닝콜"],["section-xposts","08","X 발언"],["section-ownership","09","지분·목표가"]].map(([id,num,label]) => (
             <a key={id} href={"#"+id} onClick={(e)=>{e.preventDefault();setDrawerOpen(false);const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth"});}}
               style={{display:"flex",alignItems:"center",gap:14,padding:"16px 20px",borderBottom:"1px solid var(--border)",color:"var(--text-1)",textDecoration:"none",fontSize:15,fontWeight:500,fontFamily:"'Pretendard',sans-serif",cursor:"pointer"}}>
               <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"var(--text-3)",minWidth:24}}>{num}</span>
@@ -2817,24 +2890,24 @@ const CompanyTab = () => {
 
         {/* ── 각 섹션 ── */}
         <div style={{padding:isMobile?"0 0 60px":"0 0 80px"}}>
-          <section id="section-news" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+          <section id="section-overview" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
             <div className="reveal">
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
                 <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>00</span>
                 <div style={{flex:1,height:1,background:"var(--border)"}} />
-                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>NEWS</span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>Overview</span>
               </div>
-              <NewsTab />
+              <CompanyTab />
             </div>
           </section>
-          <section id="section-overview" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
+          <section id="section-news" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
             <div className="reveal">
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
                 <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"var(--text-3)"}}>01</span>
                 <div style={{flex:1,height:1,background:"var(--border)"}} />
-                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>Overview</span>
+                <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.1em",textTransform:"uppercase"}}>NEWS</span>
               </div>
-              <CompanyTab />
+              <NewsTab />
             </div>
           </section>
           <section id="section-ceo" style={{padding:isMobile?"24px 16px":"32px 24px",borderBottom:"1px solid var(--border)"}}>
