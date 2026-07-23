@@ -112,7 +112,7 @@ function Countdown() {
         </div>
       </div>
       <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"var(--text-3)",marginTop:8}}>
-        {"컨센 EPS $0.45 · 매출 $24.34B"}
+        {ct.passed ? "실제 EPS $0.33(컨센 $0.45 하회) · 매출 $28.2B(역대최고)" : "컨센 EPS $0.45 · 매출 $24.34B"}
       </div>
     </div>
   );
@@ -239,6 +239,7 @@ const BASE_Q = [
   {q:"Q3'25",auto:21205,energy:3415,services:3475,total:28095,gm:18.0,opInc:1624,eps:0.39,fcf:3990,rd:1780,capex:2248},
   {q:"Q4'25",auto:17693,energy:3837,services:3371,total:24901,gm:20.1,opInc:1409,eps:0.24,fcf:1420,rd:2040,capex:2393},
   {q:"Q1'26",auto:16234,energy:2408,services:3745,total:22387,gm:21.1,opInc:941,eps:0.41,fcf:1444,rd:1946,capex:2493},
+  {q:"Q2'26",auto:20520,energy:3140,services:4580,total:28240,gm:16.8,opInc:398,eps:0.33,fcf:-1090,rd:2370,capex:5790},
 ];
 
 const ANNUAL = [
@@ -253,10 +254,21 @@ const ANNUAL = [
 
 const FSD_SUBS = [
   {q:"Q4'24",subs:0.80},{q:"Q1'25",subs:0.85},{q:"Q2'25",subs:0.95},
-  {q:"Q3'25",subs:1.04},{q:"Q4'25",subs:1.10},{q:"Q1'26",subs:1.28},
+  {q:"Q3'25",subs:1.04},{q:"Q4'25",subs:1.10},{q:"Q1'26",subs:1.28},{q:"Q2'26",subs:1.48},
 ];
 
 const BASE_CALLS = [
+  {id:7,q:"Q2'26",date:"2026-07-22",sentiment:"mixed",
+   headline:"매출 역대최고 $28.2B · 마진압박으로 EPS 컨센 하회 · CapEx $5.8B 급증 · 로보택시 7개 도시",
+   quotes:[
+     {s:"Elon Musk",t:"사람들은 이제 차가 딸려오는 FSD를 사는 겁니다, 그 반대가 아니라. FSD가 수요를 이끄는 동인이 됐습니다."},
+     {s:"Elon Musk",t:"Optimus는 역사상 가장 큰 제품이 될 것이지만, 테슬라 최대의 엔지니어링·AI 도전 과제이기도 합니다."},
+     {s:"Elon Musk",t:"이상적인 목표는 사람은 물론 반려동물에게도 위해가 없는 것입니다 — FSD로 도로 안전을 계속 높여가면서."},
+     {s:"Elon Musk",t:"로보택시 성장은 여전히 지수적이지만, 아직 그 지수 곡선의 초입 단계입니다."},
+   ],
+   m:{rev:"$28.2B",eps:"$0.33",gm:"16.8%",op:"$398M",rd:"$2.37B",capex:"$5.79B"},
+   tags:["CapEx급증","마진압박","로보택시7개도시","Optimus","FSD수요동인"],
+   highlight:"🟠 매출 역대최고·수익성 컨센 하회 · FCF 적자전환(-$1.09B)"},
   {id:1,q:"Q1'26",date:"2026-04-22",sentiment:"positive",
    headline:"CapEx $25B+ 선언 · Terafab 착공 · AI 전환 가속",
    quotes:[
@@ -506,7 +518,7 @@ const CEO_TL = [
 
 const CEO_MILESTONES = [
   {n:"차량 2,000만대 인도",cur:"920만대",pct:46},
-  {n:"FSD 구독자 1,000만명",cur:"128만명 (12.8%)",pct:13},
+  {n:"FSD 구독자 1,000만명",cur:"148만명 (14.8%)",pct:15},
   {n:"Optimus 100만대 인도",cur:"파일럿 단계",pct:2},
   {n:"Robotaxi 100만대 상업 운행",cur:"소규모 운행 중",pct:1},
   {n:"조정 EBITDA $500억",cur:"$58.4억 (12%)",pct:12},
@@ -1460,13 +1472,13 @@ export default function App() {
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:20}}>
           <KPI label="시가총액"         value={mktCap}     sub={stock.date+" 종가 기준"} color={R} />
           <KPI label="2025 연간매출"    value="$94.8B"     sub="YoY -3%" />
-          <KPI label="Q1'26 EPS"       value="$0.41"      sub="컨센 +17%" color={GR} />
-          <KPI label="다음 실적 발표"   value="7/22"        sub="Q2'26 컨센 EPS $0.45" color={AC} />
-          <KPI label="자동차 총이익률"  value="21.1%"      sub="5분기 최고" color={AC} />
-          <KPI label="FSD 구독자"       value="128만명"    sub="+51% YoY" color={YL} />
+          <KPI label="Q2'26 EPS"       value="$0.33"      sub="컨센 $0.45 하회" color={R} />
+          <KPI label="Q2'26 매출"       value="$28.2B"      sub="역대최고 · YoY +26%" color={GR} badge="NEW" />
+          <KPI label="매출총이익률"     value="16.8%"      sub="전분기比 -4.3%p" color={R} />
+          <KPI label="FSD 구독자"       value="148만명"    sub="+56% YoY" color={YL} />
           <KPI label="FSD ARR"          value="$5.46억"    sub="연간 반복매출" color={GR} badge="NEW" />
           <KPI label="2026 CapEx 가이던스" value="$25B+"  sub="기존 $20B → 상향" color={R} badge="↑" />
-          <KPI label="현금 & 투자"      value="$44.7B"    sub="Q1'26 기준" />
+          <KPI label="현금 & 투자"      value="$43.5B"    sub="Q2'26 기준" />
           <KPI label="52주 범위"        value={rangeVal}   sub={rangeSub} color={MU} />
         </div>
 
@@ -1657,14 +1669,14 @@ export default function App() {
         {perfSub === "quarterly" && (
           <div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:16}}>
-              <KPI label="Q1'26 총 매출" value="$22.4B" sub="YoY +16%" />
-              <KPI label="자동차" value="$16.2B" sub="+16%" color={R} />
-              <KPI label="에너지" value="$2.4B" sub="-12%" color={AC} />
-              <KPI label="서비스/FSD" value="$3.75B" sub="+42%" color={GR} />
-              <KPI label="총이익률" value="21.1%" sub="5분기 최고" color={YL} />
-              <KPI label="EPS(비GAAP)" value="$0.41" sub="컨센 +17%" color={GR} />
-              <KPI label="R&D 지출" value="$1.95B" sub="매출 9% · YoY +38%" color={AC} badge="NEW" />
-              <KPI label="FCF" value="$1.44B" sub="음전환 예고" color={YL} />
+              <KPI label="Q2'26 총 매출" value="$28.2B" sub="역대최고 · YoY +26%" color={GR} badge="NEW" />
+              <KPI label="자동차" value="$20.5B" sub="+23%" color={R} />
+              <KPI label="에너지" value="$3.14B" sub="+13%" color={AC} />
+              <KPI label="서비스/FSD" value="$4.58B" sub="+50%" color={GR} />
+              <KPI label="총이익률" value="16.8%" sub="전분기比 -4.3%p" color={R} />
+              <KPI label="EPS(비GAAP)" value="$0.33" sub="컨센 $0.45 하회" color={R} />
+              <KPI label="R&D 지출" value="$2.37B" sub="매출 8% · YoY +57%" color={AC} badge="NEW" />
+              <KPI label="FCF" value="-$1.09B" sub="음전환 (예고대로)" color={R} />
             </div>
             {/* CapEx 경고 배너 */}
             <div style={{...card,marginBottom:14,borderColor:"rgba(227,25,55,.5)",background:"var(--red-tint)"}}>
@@ -1879,12 +1891,12 @@ export default function App() {
         {perfSub === "rd" && (
           <div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:16}}>
-              <KPI label="Q1'26 R&D"           value="$1.95B" sub="매출 9% · YoY +38%" color={AC} badge="NEW" />
+              <KPI label="Q2'26 R&D"           value="$2.37B" sub="매출 8% · YoY +57%" color={AC} badge="NEW" />
               <KPI label="2025 연간 R&D"        value="$6.74B" sub="YoY +46%"            color={AC} />
-              <KPI label="Q1'26 CapEx"          value="$2.49B" sub="YoY +67%"            color="#a78bfa" badge="↑" />
+              <KPI label="Q2'26 CapEx"          value="$5.79B" sub="YoY +142%"           color="#a78bfa" badge="↑" />
               <KPI label="2026 CapEx 가이던스"  value="$25B+"  sub="2025 $8.5B의 3배"   color={R}  badge="⚠" />
               <KPI label="Terafab 투자액"        value="$3B"    sub="Giga Texas 반도체 팹" color={YL} badge="NEW" />
-              <KPI label="FCF Q1'26"             value="$1.44B" sub="음전환 예고"         color={YL} />
+              <KPI label="FCF Q2'26"             value="-$1.09B" sub="음전환 (CapEx 급증)" color={R} />
             </div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
               <div style={card}>
@@ -1953,9 +1965,9 @@ export default function App() {
               </div>
             </div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:16}}>
-              <KPI label="FSD 구독자" value="128만명" sub="Q1'26 · YoY +51%" color={AC} badge="NEW" />
-              <KPI label="FSD ARR"    value="$5.46억" sub="연간 반복매출"     color={GR} badge="NEW" />
-              <KPI label="FSD 취득률" value="~14%"   sub="누적 인도 920만대 대비" color={YL} badge="NEW" />
+              <KPI label="FSD 구독자" value="148만명" sub="Q2'26 · YoY +56%" color={AC} badge="NEW" />
+              <KPI label="FSD ARR"    value="$5.46억" sub="연간 반복매출(Q1'26 기준)"     color={GR} />
+              <KPI label="FSD 취득률" value="~16%"   sub="누적 인도 920만대 대비" color={YL} badge="NEW" />
               <KPI label="구독자(월정액)" value="476,100명" sub="$546M ARR"   color={AC} />
               <KPI label="일시불 구매자"  value="823,900명" sub="2026.02 폐지" color={MU} />
               <KPI label="FSD 누적 주행" value={(fsdMiles.totalMiles/1e9).toFixed(2)+"B 마일"} sub={"목표 100억 마일 달성! · 일 "+Math.round(fsdMiles.dailyMiles/1e6)+"M 마일"} color={GR} badge="✅" />
@@ -2041,7 +2053,7 @@ export default function App() {
                   {[
                     ["구독 전용 전환","2026.02.14 일시불 폐지. 월정액만 가능. 예측 가능한 반복 매출 확보.",AC],
                     ["가격 인상 예고","기능 고도화에 따라 구독료 인상 계획. 현재 북미 $99/월.",YL],
-                    ["CEO 보상 연계","FSD 구독자 1,000만명 달성 조건. 현재 128만명 (12.8%).",R],
+                    ["CEO 보상 연계","FSD 구독자 1,000만명 달성 조건. 현재 148만명 (14.8%).",R],
                   ].map(([t,d,c],i) => (
                     <div key={i} style={{background:c+"0d",border:"1px solid "+c+"30",borderRadius:3,padding:"10px 12px"}}>
                       <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:c,marginBottom:5}}>{t}</div>
@@ -2093,10 +2105,10 @@ export default function App() {
         {[
           {n:"Model 3 / Model Y",  st:"PRODUCTION",        sc:"live",d:"핵심 볼륨 모델. 상하이·프리몬트·베를린 생산. 195만대/년.",ex:"195만대/년",ec:GR},
           {n:"Cybertruck",          st:"PRODUCTION",        sc:"live",d:"스테인리스 풀사이즈 픽업. 텍사스 생산. 수율 안정화.",ex:">12.5만대/년",ec:GR},
-          {n:"Cybercab (로보택시)", st:"PRODUCTION → RAMP", sc:"ramp",d:"2026.02 첫 차량 출고, 4월 연속생산 시작. NHTSA 2,500대 상한 제외 확보. 오스틴 전역·텍사스 2개 도시 무감독 운행 확장(2026.06). 초기 생산 극도로 느리다가 연말 급증 예상.",ex:"오스틴 전역 + 텍사스 2개 도시 운영 중",ec:GR},
-          {n:"Optimus V3",          st:"DEV → PRODUCTION",  sc:"dev", d:"Q1'26 V3 공개. Fremont 라인 설치 중. 목표: 100만대/년 · 단가 $20,000. 2027년 텍사스 2공장.",ex:"100만대/년 목표 · $20K 목표가",ec:AC},
+          {n:"Cybercab (로보택시)", st:"PRODUCTION → RAMP", sc:"ramp",d:"2026.02 첫 차량 출고, 4월 연속생산 시작. NHTSA 2,500대 상한 제외 확보. 오스틴 전역·텍사스 2개 도시 무감독 운행 확장(2026.06) → 7개 대도시권으로 확대, 누적 유상 250만 마일 돌파(2026.07 Q2 어닝콜). 초기 생산 극도로 느리다가 연말 급증 예상.",ex:"7개 대도시권 운영 · 누적 250만 마일",ec:GR},
+          {n:"Optimus V3",          st:"DEV → PRODUCTION",  sc:"dev", d:"Q1'26 V3 공개. Fremont 라인 설치 중, Q3'26 초도 생산 예정(2026.07 Q2 어닝콜 확인). 목표: 100만대/년 · 단가 $20,000. 2027년 텍사스 2공장.",ex:"Q3'26 초도생산 예정 · 100만대/년 목표",ec:AC},
           {n:"Megapack / Powerwall",st:"PRODUCTION·SCALING",sc:"live",d:"에너지 저장. 2025년 $12.8B(+27% YoY). CA·상하이·TX 생산. 2025 배포 46.7GWh(+48%). 2026.06.23 NatPower(이탈리아·영국) $4~5B 계약 체결 — 25GWh 1단계(CA 공장 연산 62.5%), 장기 목표 100GWh·$15B 이상(20년). Autobidder 포함 수직통합.",ex:"NatPower $5B · 46.7GWh 배포",ec:GR},
-          {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"v14.3.4: Cybertruck Smart Summon 추가. 구독자 128만명(+51%). 네덜란드·벨기에 유럽 승인. 독일·핀란드 선제 승인 검토(EU 공식 결정 10월 예정). 스웨덴 반대 권고(속도위반). 한국 포함 12개국 심사 중.",ex:"독일·핀란드 선제 검토 · ARR $546M",ec:YL},
+          {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"v14.3.4: Cybertruck Smart Summon 추가. 구독자 148만명(+56%). 북미 신규 인도차량 55%↑가 FSD 동시구매 — 이제 FSD가 차량 판매를 견인하는 수요 동인. 네덜란드·벨기에 유럽 승인. 독일·핀란드 선제 승인 검토(EU 공식 결정 10월 예정). 스웨덴 반대 권고(속도위반). 한국 포함 12개국 심사 중.",ex:"독일·핀란드 선제 검토 · ARR $546M",ec:YL},
           {n:"Tesla Semi",          st:"PILOT PRODUCTION",  sc:"ramp",d:"전기 대형트럭. 2026년 생산 돌입 예정.",ex:"2026년 양산 목표",ec:YL},
           {n:"MEGAPOD",              st:"TRADEMARK FILED",   sc:"dev", d:"2026.06.18 USPTO 상표 출원. 모듈형 AI 데이터센터 하드웨어(서버·PDU·냉각 포함). Supercharger 7GW 전력 활용 분산 AI 인프라 구상. Digital Optimus와 연계.",ex:"2026.06.18 출원 · 미출시",ec:AC},
           {n:"Tesla Roadster (2세대)",st:"REVEAL 예정",        sc:"dev", d:"2026년 8월 공개·데모 이벤트 예정. Musk Q1'26 어닝콜에서 공개 지연 확인. SpaceX 패키지(냉기 추진기) 포함. $200K~250K 예정. 양산 2027년 시작.",ex:"2026.08 공개 예정 · $200K~250K",ec:YL},
@@ -2171,7 +2183,7 @@ export default function App() {
         <div style={lbl}>종합 결론</div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:20,marginTop:12}}>
           {[
-            ["TESLA 2026 투자 테제",R,"CapEx $25B 충격은 단기 FCF 압박이나, AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조. FSD ARR·에너지 성장이 버퍼 역할. 현재 ~366x PER(2026.06 기준)은 AI·자율주행 테제 프리미엄. 다음 실적 발표 2026.07.22 예정."],
+            ["TESLA 2026 투자 테제",R,"CapEx $25B 가이던스대로 Q2 집행되며 마진 압박 현실화 — 총이익률 16.8%·영업이익률 1.4%, 예고됐던 FCF 적자전환(-$1.09B)도 실현. AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조는 유지. FSD 구독 148만명(+56% YoY)이 버퍼 역할. Q2'26 실적(2026.07.22 발표): 매출 역대최고 $28.2B, EPS는 컨센 $0.45 대비 $0.33으로 하회."],
             ["FSD → ROBOTAXI → OPTIMUS 로드맵",AC,"FSD 취득률 14%·구독 전용 전환이 반복 수익 기반 구축. 10억 마일 목표 도달 시 무감독 FSD 전면화. Robotaxi 확장 → Optimus 양산이 순차적 밸류에이션 리레이팅 핵심."],
           ].map(([t,c,d],i) => (
             <div key={i}>
@@ -2853,8 +2865,8 @@ export default function App() {
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10}}>
               {[
                 {label:"시가총액",value:mktCap,sub:"2026.06"},
-                {label:"총이익률",value:"21.1%",sub:"Q1'26"},
-                {label:"다음 실적",value:"7/22",sub:"Q2'26 컨센 $0.45"},
+                {label:"총이익률",value:"16.8%",sub:"Q2'26"},
+                {label:"Q2'26 EPS",value:"$0.33",sub:"컨센 $0.45 하회"},
                 {label:"기준일",value:stock.date.slice(5),sub:"Yahoo Finance"},
               ].map((k,i) => (
                 <div key={i} style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px"}}>
