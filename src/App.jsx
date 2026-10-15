@@ -54,7 +54,7 @@ function Countdown() {
   const [ct, setCt] = useState({d:0,h:0,m:0,s:0,passed:false});
   const isMobile = useIsMobile();
   useEffect(() => {
-    const target = new Date(Date.UTC(2026, 6, 22, 20, 30, 0));
+    const target = new Date(NEXT_EARNINGS.utc);
     const tick = () => {
       const diff = (target - new Date()) / 1000;
       if (diff <= 0) { setCt({d:0,h:0,m:0,s:0,passed:true}); return; }
@@ -75,7 +75,7 @@ function Countdown() {
     <div style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:14,padding:"16px 18px",marginBottom:24}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
         <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.08em",textTransform:"uppercase"}}>
-          {ct.passed ? "🔔 Q2'26 실적 발표됨" : "Q2'26 실적 발표까지"}
+          {ct.passed ? "🔔 " + NEXT_EARNINGS.label + " 실적 웹캐스트 시작됨" : NEXT_EARNINGS.label + " 실적 웹캐스트까지"}
         </div>
         {!ct.passed && (
           <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -101,18 +101,18 @@ function Countdown() {
       <div style={{display:"flex",flexWrap:"wrap",gap:isMobile?8:16,marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.08em"}}>현지</span>
-          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:"var(--text-1)"}}>7/22 16:30 ET</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:"var(--text-1)"}}>{NEXT_EARNINGS.etLabel}</span>
           <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)"}}>(장마감 후)</span>
         </div>
         <div style={{width:1,height:16,background:"var(--border)",alignSelf:"center"}} />
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:"var(--text-3)",letterSpacing:"0.08em"}}>한국</span>
-          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:"#38BDF8"}}>7/23 05:30 KST</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:"#38BDF8"}}>{NEXT_EARNINGS.krLabel}</span>
           <span style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:"var(--text-3)"}}>{"(익일 새벽)"}</span>
         </div>
       </div>
       <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"var(--text-3)",marginTop:8}}>
-        {ct.passed ? "실제 EPS $0.33(컨센 $0.45 하회) · 매출 $28.2B(역대최고)" : "컨센 EPS $0.45 · 매출 $24.34B"}
+        {ct.passed ? "발표 결과는 실적 탭에서 확인하세요" : "Q3 컨센 매출 $27.6~27.8B · EPS는 출처별 상이"}
       </div>
     </div>
   );
@@ -210,6 +210,11 @@ All USD. shares in billions.`,
 /* ═══════════════════════════════════════
    BASE DATA
 ═══════════════════════════════════════ */
+/* ── 다음 실적 발표 (SEC 8-K 2026-10-02 첨부 기준 · 분기마다 수동 갱신) ── */
+const NEXT_EARNINGS = { label: "Q3'26", utc: Date.UTC(2026, 9, 21, 21, 30, 0), etLabel: "10/21(수) 17:30 ET 웹캐스트", krLabel: "10/22(목) 06:30 KST 웹캐스트" };
+/* ── 보통주 발행주식수: 10-Q 표지 2026-07-16 기준 3,949,547,394주 (Worker 값 3.76은 구버전) ── */
+const SHARES_OUT_B = 3.9495;
+
 const BASE_Q = [
   {q:"Q2'19",auto:5376,energy:369,services:605,total:6350,gm:14.5,opInc:-167,eps:-2.31,fcf:null,rd:334,capex:null},
   {q:"Q3'19",auto:5353,energy:402,services:548,total:6303,gm:18.9,opInc:261,eps:0.78,fcf:null,rd:334,capex:null},
@@ -238,8 +243,8 @@ const BASE_Q = [
   {q:"Q2'25",auto:16661,energy:2789,services:3046,total:22496,gm:17.2,opInc:923,eps:0.33,fcf:146,rd:1510,capex:2394},
   {q:"Q3'25",auto:21205,energy:3415,services:3475,total:28095,gm:18.0,opInc:1624,eps:0.39,fcf:3990,rd:1780,capex:2248},
   {q:"Q4'25",auto:17693,energy:3837,services:3371,total:24901,gm:20.1,opInc:1409,eps:0.24,fcf:1420,rd:2040,capex:2393},
-  {q:"Q1'26",auto:16234,energy:2408,services:3745,total:22387,gm:21.1,opInc:941,eps:0.41,fcf:1444,rd:1946,capex:2493},
-  {q:"Q2'26",auto:20520,energy:3140,services:4580,total:28240,gm:16.8,opInc:398,eps:0.33,fcf:-1090,rd:2370,capex:5790},
+  {q:"Q1'26",auto:16234,energy:2408,services:3745,total:22387,gm:21.1,opInc:941,eps:0.13,fcf:1444,rd:1946,capex:2493},
+  {q:"Q2'26",auto:20516,energy:3139,services:4581,total:28236,gm:16.8,opInc:398,eps:0.32,fcf:-1092,rd:2371,capex:5789},
 ];
 
 const ANNUAL = [
@@ -266,7 +271,7 @@ const BASE_CALLS = [
      {s:"Elon Musk",t:"이상적인 목표는 사람은 물론 반려동물에게도 위해가 없는 것입니다 — FSD로 도로 안전을 계속 높여가면서."},
      {s:"Elon Musk",t:"로보택시 성장은 여전히 지수적이지만, 아직 그 지수 곡선의 초입 단계입니다."},
    ],
-   m:{rev:"$28.2B",eps:"$0.33",gm:"16.8%",op:"$398M",rd:"$2.37B",capex:"$5.79B"},
+   m:{rev:"$28.2B",eps:"$0.33(비GAAP)",gm:"16.8%",op:"$398M",rd:"$2.37B",capex:"$5.79B"},
    tags:["CapEx급증","마진압박","로보택시7개도시","Optimus","FSD수요동인"],
    highlight:"🟠 매출 역대최고·수익성 컨센 하회 · FCF 적자전환(-$1.09B)"},
   {id:1,q:"Q1'26",date:"2026-04-22",sentiment:"positive",
@@ -277,7 +282,7 @@ const BASE_CALLS = [
      {s:"Elon Musk",t:"Optimus는 역사상 가장 큰 제품이 될 것입니다."},
      {s:"Vaibhav Taneja (CFO)",t:"AI 관련 지출이 연간 내내 높은 수준을 유지할 것입니다."},
    ],
-   m:{rev:"$22.4B",eps:"$0.41",gm:"21.1%",op:"$941M",rd:"$1.95B",capex:"$2.49B"},
+   m:{rev:"$22.4B",eps:"$0.41(비GAAP)",gm:"21.1%",op:"$941M",rd:"$1.95B",capex:"$2.49B"},
    tags:["Terafab","CapEx$25B","Optimus","FSD","Cybercab"],
    highlight:"🔴 CapEx $25B 쇼크 · Terafab $3B 착공"},
   {id:2,q:"Q4'25",date:"2026-01-29",sentiment:"mixed",
@@ -296,7 +301,7 @@ const BASE_CALLS = [
      {s:"Elon Musk",t:"로보택시 서비스를 오스틴에서 론칭했습니다. 테슬라 역사상 가장 중요한 제품 발매일입니다."},
      {s:"Elon Musk",t:"Optimus는 현재 Gigafactory 내부 작업에 투입. 내년에는 수천 대를 생산할 것입니다."},
    ],
-   m:{rev:"$28.1B",eps:"$0.50",gm:"18.0%",op:"$1.62B",rd:"$1.78B",capex:"$2.25B"},
+   m:{rev:"$28.1B",eps:"$0.50(비GAAP)",gm:"18.0%",op:"$1.62B",rd:"$1.78B",capex:"$2.25B"},
    tags:["Robotaxi","Optimus","Energy"],highlight:"✅ 로보택시 오스틴 정식 런칭"},
   {id:4,q:"Q2'25",date:"2025-07-23",sentiment:"mixed",
    headline:"$22.5B · DOGE 퇴임 후 Tesla 복귀 · FSD 중국 전망",
@@ -304,7 +309,7 @@ const BASE_CALLS = [
      {s:"Elon Musk",t:"정부 업무에서 물러나 Tesla에 더 집중합니다."},
      {s:"Elon Musk",t:"FSD는 지금 인간보다 훨씬 안전합니다. 중국 전면 승인을 3분기 내로 기대합니다."},
    ],
-   m:{rev:"$22.5B",eps:"$0.40",gm:"17.2%",op:"$923M",rd:"$1.51B",capex:"$2.39B"},
+   m:{rev:"$22.5B",eps:"$0.40(비GAAP)",gm:"17.2%",op:"$923M",rd:"$1.51B",capex:"$2.39B"},
    tags:["DOGE복귀","FSD중국"],highlight:"⚠️ DOGE 퇴임 · Tesla 집중 선언"},
   {id:5,q:"Q1'25",date:"2025-04-22",sentiment:"negative",
    headline:"$19.3B YoY-9% · DOGE 여파 · 유럽 -39% · Robotaxi 6월 예고",
@@ -312,7 +317,7 @@ const BASE_CALLS = [
      {s:"Elon Musk",t:"테슬라가 오스틴에서 6월에 아무도 없이 도로를 달릴 것입니다."},
    ],
    m:{rev:"$19.3B",eps:"$0.12",gm:"16.3%",op:"$399M",rd:"$1.41B",capex:"$1.49B"},
-   tags:["DOGE여파","유럽-39%"],highlight:"🔴 분기 최저 영업이익 $399M"},
+   tags:["DOGE여파","유럽-39%"],highlight:"🔴 2025 Q1 영업이익 $399M — 당시 분기 최저 (2026 Q2 $398M으로 갱신)"},
   {id:6,q:"Q3'24",date:"2024-10-23",sentiment:"positive",
    headline:"영업이익 $2.72B 연중 최고 · Cybercab 공개 · FSD v12",
    quotes:[
@@ -453,16 +458,16 @@ const BASE_INST = [
   {id:2,date:"2026-01",inst:"ARK Invest",action:"SELL",amt:"$44M",shares:"132K주",note:"차익실현, 목표가 상향 직전",sent:"neutral"},
   {id:3,date:"2025-12-22",inst:"ARK Invest",action:"SELL",amt:"$29M",shares:"60.7K주",note:"4주 연속 매도 트렌드",sent:"neutral"},
   {id:4,date:"2025-11-06",inst:"ARK Invest",action:"SELL",amt:"$87M",shares:"181K주",note:"차익실현, Mag7 다른 종목 매수",sent:"neutral"},
-  {id:5,date:"2025-Q3",inst:"Vanguard Group",action:"HOLD",amt:"~$94B",shares:"229.8M주",note:"S&P500 지수추종 자동 보유",sent:"neutral"},
+  {id:5,date:"2026-Q2",inst:"Vanguard (2개 법인 합계)",action:"HOLD",amt:"~$98B (13F 평가액)",shares:"233.6M주",note:"Vanguard Capital Mgmt 184.0M + Vanguard Portfolio Mgmt 49.6M (13F, 6/30 기준, 8/13 제출). 전체 Vanguard 법인은 미합산. S&P500 지수추종 보유",sent:"neutral"},
  
  
  
-  {id:9,date:"2026-Q1",inst:"JPMorgan Chase",action:"BUY",amt:"$551.5M",shares:"1,483,545주",note:"Q1'26 13F: 지분 추가. 총 46,075,161주 보유. 분기말 시가 $17.12B. 목표가 업그레이드(→$475) 전 매수",sent:"bullish"},
-  {id:10,date:"2026-Q4(2025)",inst:"Vanguard Group",action:"BUY",amt:"~$2.7B",shares:"6.6M주 추가",note:"Q4 2025 13F: 2022년 이후 최대 분기 매수. 총 259M주 보유. 시가 $102.85B",sent:"bullish"},
-  {id:11,date:"2026-Q1",inst:"Citadel Advisors",action:"BUY",amt:"—",shares:"지분 확대",note:"Q1 2026 13F: 총 보유 상위 6위권. 헤지펀드 중 최대 포지션",sent:"bullish"},
+  {id:9,date:"2026-Q2",inst:"JPMorgan Chase",action:"SELL",amt:"~$17.3B (13F 평가액)",shares:"41.97M주 (-4.1M, -8.9%)",note:"13F 6/30 기준(8/12 제출). Q1 46.08M주 대비 감소. 평가액 기준 단가가 타 기관과 달라 재확인 필요. 목표가 $475(JPM 2026.06.05)",sent:"bearish"},
+  {id:10,date:"2025-Q4",inst:"Vanguard Group",action:"BUY",amt:"~$2.7B",shares:"6.6M주 추가",note:"Q4 2025 13F: 2022년 이후 최대 분기 매수. 총 259M주 보유. 시가 $102.85B",sent:"bullish"},
+  {id:11,date:"2026-Q2",inst:"Citadel Advisors",action:"SELL",amt:"—",shares:"56.6M주 (-11.5% vs Q1 63.9M)",note:"Q2 13F 정정본(9/2): 주식·콜·풋 기초주식 합계 기준. 원본 8/14 제출. 헤지펀드 중 대형 포지션",sent:"bearish"},
   {id:12,date:"2026-06-18",inst:"ARK Invest (Cathie Wood)",action:"BUY",amt:"$22M",shares:"추가 매수",note:"오스틴 무감독 로보택시 탑승 영상 공개 직후 $22M 추가 매수. $75 주차 위반 티켓을 신규 모델 비용 항목으로 추가 - 불케이스 $4,600 재확인",sent:"bullish"},
-  {id:13,date:"2026-Q1",inst:"BlackRock",action:"HOLD",amt:"—",shares:"기관 보유 2위",note:"Q1 2026 13F 기준 Tesla 기관 보유 2위. 글로벌 최대 자산운용사($10조 AUM). 지수추종·액티브 혼합 보유",sent:"neutral"},
-  {id:14,date:"2026-Q1",inst:"State Street",action:"HOLD",amt:"—",shares:"기관 보유 3위",note:"Q1 2026 13F 기준 3위. S&P500·ETF 지수추종 자동 보유. SPDR ETF 계열 운용",sent:"neutral"},
+  {id:13,date:"2026-Q2",inst:"BlackRock",action:"HOLD",amt:"~$90.1B (13F 평가액)",shares:"214.1M주",note:"Q2 13F 원자료 확인(주식 214,123,129주, 옵션 제외). 글로벌 최대 자산운용사. 지수추종·액티브 혼합 보유",sent:"neutral"},
+  {id:14,date:"2026-Q2",inst:"State Street",action:"HOLD",amt:"~$49.4B (13F 평가액)",shares:"117.5M주 (+2.4% vs Q1)",note:"13F 6/30 기준(정정 9/22). S&P500·ETF 지수추종 자동 보유. SPDR ETF 계열 운용",sent:"neutral"},
   {id:15,date:"2026-Q1",inst:"Geode Capital Management",action:"HOLD",amt:"—",shares:"기관 보유 4위",note:"Q1 2026 13F 기준 4위. Fidelity 계열 지수 포트폴리오 운용. 패시브 전략",sent:"neutral"},
   {id:16,date:"2026-Q1",inst:"Susquehanna International Group",action:"HOLD",amt:"—",shares:"기관 보유 5위 신규",note:"Q1 2026 13F 신규 상위 5위 진입. 퀀트·옵션·파생상품 전문 헤지펀드. 포지션 확대 추정",sent:"neutral"},
   {id:17,date:"2026-Q1",inst:"Capital World Investors",action:"HOLD",amt:"—",shares:"기관 보유 8위",note:"American Funds 운용사. 장기 액티브 투자 전략. Tesla EV·AI 성장 테제 보유",sent:"bullish"},
@@ -479,15 +484,12 @@ const BASE_INST = [
  
 
 const OWNERSHIP = [
-  {name:"일론 머스크",value:19.9,color:"#E31937",shares:"1.12B주"},
-  {name:"Vanguard",value:7.3,color:"#38BDF8",shares:"229.8M주"},
-  {name:"BlackRock",value:5.8,color:"#10b981",shares:"188.8M주"},
-  {name:"State Street",value:3.4,color:"#fbbf24",shares:"114.7M주"},
-  {name:"Geode Capital",value:1.7,color:"#a78bfa",shares:"~55M주"},
-  {name:"Larry Ellison",value:1.4,color:"#f97316",shares:"~46M주"},
-  {name:"기타 기관",value:24.5,color:"var(--bg-elev)",shares:"~815M주 (총 4,382개 기관·42.5%)"},
-  {name:"리테일",value:35.1,color:"#1e3a5f",shares:"~1.17B주"},
-  {name:"기타 내부자",value:7.0,color:"#5b21b6",shares:"~233M주"},
+  {name:"일론 머스크",value:28.4,color:"#E31937",shares:"1.12B주 (Form 4, 발행주식 대비)"},
+  {name:"Vanguard (2개 법인)",value:5.9,color:"#38BDF8",shares:"233.6M주 (6/30)"},
+  {name:"BlackRock",value:5.4,color:"#10b981",shares:"214.1M주 (6/30)"},
+  {name:"State Street",value:3.0,color:"#fbbf24",shares:"117.5M주 (6/30)"},
+  {name:"JPMorgan",value:1.1,color:"#f97316",shares:"42.0M주 (6/30)"},
+  {name:"기타 (출처 미확인 포함)",value:56.2,color:"var(--bg-elev)",shares:"나머지 (기관·리테일·내부자 합계)"},
 ];
 
 const CEO_TL = [
@@ -512,15 +514,16 @@ const CEO_TL = [
   {y:"2026.02",t:"SpaceX-xAI 합병",d:"xAI를 SpaceX에 합병. Grok이 Digital Optimus를 지휘하는 통합 AI 아키텍처 공식화. SpaceX 밸류에이션이 약 $1조로 상승하는 결정적 계기."},
   {y:"2026.06",t:"SpaceX 나스닥 상장 — 역대 최대 IPO",d:"6/12 SPCX 티커로 상장. 공모가 $135 → 첫날 $150 마감, 밸류에이션 약 $1.77조. $75B 조달로 역대 최대 IPO. 머스크 SpaceX 지분가치 약 $690~866억 추산. 6/24 $250억 채권 발행(브릿지론 $175억 상환 목적, 현금보유 $1,008억)."},
   {y:"2026.06",t:"세계 최초 '트릴리어네어' 등극",d:"SpaceX 상장 직후 순자산 약 $1.05~1.1조 달성, 인류 역사상 최초의 1조 달러 자산가. Tesla 지분 + SpaceX 지분 합산. 2위 Larry Page와 약 $700B 이상 격차."},
-  {y:"2026.06",t:"2018년 보상안 행사 — 지분 19.9% 급증",d:"6/16 옵션 행사로 3.04억주 취득(행사가 $23.34). 순증 2.86억주, 총 보유 약 11.2억주(지분 19.9%)로 상승. 신규 주식은 2028년 1월까지 베스팅 후 5년 락업(2033년까지 매도 불가)."},
-  {y:"2026",t:"물리적 AI 전환 가속",d:"Terafab 착공, Model S·X 단종, Robotaxi 오스틴 전역·텍사스 2개 도시 확장. MEGAPOD AI 데이터센터 상표 출원(6/18). Roadster 8월 공개 예정. NatPower $5B 메가팩 계약(유럽 역대 최대). Cars.com 6년 연속 미국산 차량 1위(Model 3 #1, Model Y #2)."},
+  {y:"2026.06",t:"2018년 보상안 행사 — 지분 약 28% 수준",d:"6/16 옵션 행사로 3.04억주 취득(행사가 $23.34, Form 4 확인). 세금 원천징수 1,753만주 차감 후 순증 약 2.86억주. 직접 보유 7.10억주 + 별도 보유 4.13억주 = 총 약 11.2억주 → 발행주식 3.95B 기준 약 28.4%(기존 19.9% 표기는 기준 불명으로 정정). 신규 주식은 2028년 1월까지 베스팅 후 5년 락업(2033년까지 매도 불가)."},
+  {y:"2026",t:"물리적 AI 전환 가속",d:"Terafab 착공(Giga Texas 연구팹 4월, 본 부지 Grimes County 8월 발표), Model S·X 단종, Robotaxi 7개 대도시권 확장(무감독 6곳), MEGAPOD 상표 출원(2026.06), Roadster 공개 행사 10/15 예정(8월→10/1→10/15 연기). NatPower $5B 메가팩 계약(유럽 역대 최대). Cars.com 6년 연속 미국산 차량 1위(Model 3 #1, Model Y #2)."},
 ];
 
 const CEO_MILESTONES = [
   {n:"차량 2,000만대 인도",cur:"920만대",pct:46},
   {n:"FSD 구독자 1,000만명",cur:"148만명 (14.8%)",pct:15},
   {n:"Optimus 100만대 인도",cur:"파일럿 단계",pct:2},
-  {n:"Robotaxi 100만대 상업 운행",cur:"소규모 운행 중",pct:1},
+  {n:"Robotaxi 100만대 상업 운행",cur:"7개 대도시권 운영 (차량 수 미공개)",pct:1},
+  {n:"2025 보상: 트랜치 획득",cur:"0 / 12 (2026.04.30 기준)",pct:0},
   {n:"조정 EBITDA $500억",cur:"$58.4억 (12%)",pct:12},
 ];
 
@@ -536,6 +539,17 @@ const VALUES = [
 const XCATS = ["ALL","Tesla전략","FSD","Robotaxi","Cybercab","Optimus","AI·Dojo","Terafab","DOGE·정치","X·기술"];
 
 const ANALYST_TARGETS = [
+  {date:"2026.10.15",inst:"Barclays",analyst:"Dan Levy",rating:"Hold",tp:370,color:"#94A3B8",reason:"Hold 유지, 목표가 $370 (StockAnalysis 10/15). MarketBeat 7/14 기록($360→$370)과 날짜 상충.",badge:"🆕"},
+  {date:"2026.10.12",inst:"RBC Capital",analyst:"Tom Narayan",rating:"Buy",tp:480,color:"#10b981",reason:"Buy(Outperform) 유지, 목표가 $480 (StockAnalysis 10/12). 1월 $320 기록보다 상향.",badge:"🆕"},
+  {date:"2026.10.12",inst:"Jefferies",analyst:"Philippe Houchois",rating:"Hold",tp:400,color:"#94A3B8",reason:"목표가 $350→$400 상향, Hold 유지 (MarketBeat·StockAnalysis 공통). 아래 6/22 기록 $375와 직전값이 달라 확인 필요.",badge:"🆕"},
+  {date:"2026.10.08",inst:"Tigress Financial",analyst:"Ivan Feinseth",rating:"Buy",tp:550,color:"#10b981",reason:"Buy 재확인, 목표가 $550 (MarketBeat·StockAnalysis 공통).",badge:"🆕"},
+  {date:"2026.10.07",inst:"UBS",analyst:"Joseph Spak",rating:"Hold",tp:391,color:"#fbbf24",reason:"Hold 재확인, 목표가 $385→$391 (Finbold 보도). MarketBeat는 Buy로 표기해 상충 — 확인 필요.",badge:"🆕"},
+  {date:"2026.09.28",inst:"JPMorgan",analyst:"—",rating:"Neutral",tp:415,color:"#fbbf24",reason:"Neutral 유지, 목표가 $445→$415 하향 (MarketBeat, 9/28).",badge:"🆕"},
+  {date:"2026.09.04",inst:"GLJ Research",analyst:"—",rating:"Sell",tp:24.86,color:"#E31937",reason:"Sell 유지, 목표가 $24.86 (Walnut Invest 9/4 기록, 2차 출처). 공식 노트 목록에는 목표가 미표기 — 확인 필요.",badge:"🆕"},
+  {date:"2026.08.14",inst:"TD Cowen",analyst:"Itay Michaeli",rating:"Buy",tp:460,color:"#10b981",reason:"Buy 재확인, 목표가 $490→$460 하향 (7/23) 후 8/14 재확인.",badge:"🆕"},
+  {date:"2026.08.03",inst:"Stifel",analyst:"Stephen Gengaro",rating:"Buy",tp:491,color:"#10b981",reason:"Buy 유지, 목표가 $508→$491 하향 (MarketBeat, 8/3).",badge:"🆕"},
+  {date:"2026.07.24",inst:"Piper Sandler",analyst:"Alexander Potter",rating:"Overweight",tp:450,color:"#10b981",reason:"Overweight 유지, 목표가 $500→$450 하향 (7/24, 2차 출처).",badge:"🆕"},
+  {date:"2026.07.23",inst:"Morgan Stanley",analyst:"Adam Jonas",rating:"Equal-Weight",tp:400,color:"#fbbf24",reason:"Equal-Weight 유지, 목표가 $417→$400 하향 (7/23).",badge:"🆕"},
   {date:"2026.06.05",inst:"JPMorgan",analyst:"Rajat Gupta",rating:"Neutral",tp:475,color:"#38BDF8",reason:"수직 통합 재평가. EPS 2030 $7.50 전망. 11년 약세론 종료.",badge:"🔥"},
   {date:"2026.01.10",inst:"Wedbush",analyst:"Dan Ives",rating:"Outperform",tp:600,color:"#10b981",reason:"AI 전환 역사적 변곡점. 로보택시 30개 도시 가속.",badge:null},
   {date:"2026.01.08",inst:"TD Cowen",analyst:"—",rating:"Buy",tp:519,color:"#10b981",reason:"Cybercab $0.30/마일 — 라이드셰어 구조적 파괴.",badge:null},
@@ -545,7 +559,7 @@ const ANALYST_TARGETS = [
   {date:"2026.01.29",inst:"Goldman Sachs",analyst:"Mark Delaney",rating:"Neutral",tp:405,color:"#fbbf24",reason:"CapEx $25B → FCF 음전환. 실행 리스크 높음.",badge:null},
   {date:"2026.01.15",inst:"RBC Capital",analyst:"Tom Narayan",rating:"Outperform",tp:320,color:"#fbbf24",reason:"전통 EV 경쟁 심화. 자율주행 타임라인 불확실.",badge:null},
   {date:"2026.04.01",inst:"Wells Fargo",analyst:"Colin Langan",rating:"Underweight",tp:125,color:"#E31937",reason:"EV 수요 구조적 둔화. 밸류에이션 현실과 괴리.",badge:null},
-  {date:"2025.01.01",inst:"ARK Invest",analyst:"Cathie Wood",rating:"—",tp:4600,color:"#a78bfa",reason:"로보택시+Optimus 대량생산 DCF. 2029 불마켓 가정.",badge:"⚠극단값"},
+  {date:"2025.01.01",inst:"ARK Invest",analyst:"Cathie Wood",rating:"—",tp:4600,color:"#a78bfa",reason:"2022년 4월 몬테카를로 모델의 2026년 기대값(3:1 액면분할 이전 기준). 현재 목표가 아님 — 최신 목표가 확인 불가.",badge:"⚠구모델"},
   {date:"2026.06.22",inst:"Jefferies",analyst:"—",rating:"Hold",tp:375,color:"#94A3B8",reason:"SpaceX 합병 기대로 TSLA의 SPCX 추종주식화 위험 경고. 로보택시·휴머노이드 초기 손실 센터 전망. 밸류에이션-실적 괴리 지속.",badge:null},
   {date:"2026.05.19",inst:"Barclays",analyst:"Dan Levy",rating:"Hold",tp:360,color:"#94A3B8",reason:"메모리 칩·구리 원자재 비용 상승. Model Y 가격 인상으로 일부 상쇄. 로보택시·AI 기대 이미 주가 반영.",badge:null},
 ];
@@ -1004,8 +1018,8 @@ export default function App() {
 
   /* ── stock state ── */
   const [stock, setStock] = useState({
-    price:391.00, prevClose:418.45, high52w:498.83, low52w:273.21,
-    volume:"63.4M", date:"2026-06-05", shares:3.76,
+    price:367.16, prevClose:375.23, high52w:498.83, low52w:297.38,
+    volume:"31.0M", date:"2026-10-14", shares:SHARES_OUT_B,
   });
   const [ldStock, setLdStock] = useState(false);
   const [fsdMiles, setFsdMiles] = useState({
@@ -1066,7 +1080,7 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        const keys = ["tsla:quarterly","tsla:calls","tsla:posts","tsla:inst","tsla:stock","tsla:fsd"];
+        const keys = ["tsla:quarterly:v2","tsla:calls","tsla:posts","tsla:inst","tsla:stock","tsla:fsd"];
         const [q,c,p,i,s] = await Promise.all(keys.map(k => LS.get(k)));
         if (q?.value) setQuarterly(JSON.parse(q.value));
         if (c?.value) setCalls(JSON.parse(c.value));
@@ -1123,7 +1137,7 @@ export default function App() {
 
   /* ── derived values ── */
   const mktCap = useMemo(() => {
-    const cap = stock.price * stock.shares;
+    const cap = stock.price * SHARES_OUT_B;
     return cap >= 1000 ? "$"+(cap/1000).toFixed(2)+"T" : "$"+cap.toFixed(0)+"B";
   }, [stock]);
 
@@ -1223,15 +1237,14 @@ export default function App() {
       }
 
       // 2차: EDGAR 실패 시 Claude AI로 폴백
-      if (!d) {
-        d = await callClaude(SYS.quarterly, "Find Tesla latest quarterly earnings. Return JSON.");
-        source = "Claude AI";
-      }
+      if (!d) recordLog("perf", false, "EDGAR 응답 없음 — 재무 수치는 AI 폴백으로 저장하지 않음");
 
-      if (d && d.q && d.total) {
+      const REQ_FIELDS = ["total", "opInc", "eps", "rd", "capex"];
+      const shapeOk = !!(d && d.q && d.periodMonths === 3 && REQ_FIELDS.every(k => typeof d[k] === "number" && Number.isFinite(d[k])));
+      if (shapeOk) {
         const exists = quarterly.some(q => q.q === d.q);
         if (!exists) {
-          setQuarterly(prev => { const n = [...prev, d]; save("tsla:quarterly", n); return n; });
+          setQuarterly(prev => { const n = [...prev, d]; save("tsla:quarterly:v2", n); return n; });
           recordLog("perf", true, d.q+" 추가 — $"+(d.total/1000).toFixed(1)+"B ("+source+")");
         } else recordLog("perf", false, d.q+" 이미 존재 ("+source+")");
       } else throw new Error("구조 오류");
@@ -1288,9 +1301,9 @@ export default function App() {
   const resetStorage = useCallback(async () => {
     if (!window.confirm("모든 업데이트 데이터를 초기화합니다. 계속하시겠습니까?")) return;
     try {
-      await Promise.all(["tsla:quarterly","tsla:calls","tsla:posts","tsla:inst","tsla:stock"].map(k => LS.delete(k)));
+      await Promise.all(["tsla:quarterly","tsla:quarterly:v2","tsla:calls","tsla:posts","tsla:inst","tsla:stock"].map(k => LS.delete(k)));
       setQuarterly(BASE_Q); setCalls(BASE_CALLS); setPosts(BASE_POSTS); setInstActs(BASE_INST);
-      setStock({price:391.00,prevClose:418.45,high52w:498.83,low52w:273.21,volume:"63.4M",date:"2026-06-05",shares:3.76});
+      setStock({price:367.16,prevClose:375.23,high52w:498.83,low52w:297.38,volume:"31.0M",date:"2026-10-14",shares:SHARES_OUT_B});
       setUpdateHistory([]); setSaveToast({ok:true,msg:"초기화 완료"});
       setTimeout(() => setSaveToast(null), 2500);
     } catch(e) { setSaveToast({ok:false,msg:"초기화 실패: "+e.message}); }
@@ -1472,7 +1485,7 @@ export default function App() {
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:20}}>
           <KPI label="시가총액"         value={mktCap}     sub={stock.date+" 종가 기준"} color={R} />
           <KPI label="2025 연간매출"    value="$94.8B"     sub="YoY -3%" />
-          <KPI label="Q2'26 EPS"       value="$0.33"      sub="컨센 $0.45 하회" color={R} />
+          <KPI label="Q2'26 EPS(GAAP)" value="$0.32"      sub="비GAAP $0.33 · 컨센 $0.53~0.55 하회" color={R} />
           <KPI label="Q2'26 매출"       value="$28.2B"      sub="역대최고 · YoY +26%" color={GR} badge="NEW" />
           <KPI label="매출총이익률"     value="16.8%"      sub="전분기比 -4.3%p" color={R} />
           <KPI label="FSD 구독자"       value="148만명"    sub="+56% YoY" color={YL} />
@@ -1488,9 +1501,9 @@ export default function App() {
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:12}}>
             {[
               ["🔴 Model S·X 단종","Q2'26 생산 종료. Fremont → Optimus 100만대/년 전환.",R],
-              ["🔵 Terafab 착공","Giga Texas $3B 반도체 R&D 팹. Intel 14A. 2026.04.22 착공.",AC],
+              ["🔵 Terafab 착공","Giga Texas 연구팹 2026.04 착공 · 본 부지 Grimes County 건설 확정(8/6). 투자 $16.8B+는 SpaceX 발표.",AC],
               ["🟡 CapEx $25B+ 선언","2026 자본지출 $25B+ (2025 $8.5B의 3배). AI·Optimus·Cybercab.",YL],
-              ["🟢 Robotaxi 확장","달라스·휴스턴 무사고 운행. FSD v14.3.3 출시.",GR],
+              ["🟢 Robotaxi 확장","7개 대도시권 · 무감독 6곳 · 누적 유상 250만 마일(Q2 공식). FSD v14.3.11 배포 중(10/7, 보도).",GR],
             ].map(([t,d,c],i) => (
               <div key={i} style={{background:c+"0d",border:"1px solid "+c+"30",borderRadius:3,padding:"12px 14px"}}>
                 <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,fontWeight:700,color:c,marginBottom:6}}>{t}</div>
@@ -1530,7 +1543,7 @@ export default function App() {
               ["🇩🇪 베를린 (Giga Berlin)","Model Y · 37.5만대/년"],
               ["🇺🇸 텍사스 (Giga Texas)","Model Y · Cybertruck · Terafab 🔵"],
               ["🇺🇸 네바다 (Gigafactory)","배터리 · Powerwall"],
-              ["Cybercab","Pilot Production 중 🟡"],
+              ["Cybercab","기가 텍사스 생산 시작 🟢"],
             ].map(([l,r],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
                 <span style={{color:l.startsWith(" ")?"var(--text-3)":MU}}>{l}</span>
@@ -1553,7 +1566,7 @@ export default function App() {
             <div style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,"+R+",#7b0016)",margin:"0 auto 12px",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Pretendard',sans-serif",fontSize:22,fontWeight:900,color:"var(--text-1)",border:"3px solid "+R,boxShadow:"0 0 18px rgba(227,25,55,.4)"}}>EM</div>
             <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:15,fontWeight:700,color:"var(--text-1)",marginBottom:2}}>Elon Reeve Musk</div>
             <div style={{fontSize:10,color:R,letterSpacing:0.5,marginBottom:12}}>CHAIRMAN & CEO · TESLA</div>
-            {[["출생","1971.06.28 (만 55세 🎂 오늘!)"],["학력","UPenn 경제·물리학"],["CEO 취임","2008.10~ (현재)"],["순자산","~$1.07~1.2조 (2026.06)"],["국적","미국·캐나다·남아공"]].map(([k,v],i) => (
+            {[["출생","1971.06.28 (만 55세)"],["학력","UPenn 경제·물리학"],["CEO 취임","2008.10~ (현재)"],["순자산","~$1.07~1.2조 (2026.06)"],["국적","미국·캐나다·남아공"]].map(([k,v],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
                 <span style={{color:MU}}>{k}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:TX}}>{v}</span>
               </div>
@@ -1561,7 +1574,7 @@ export default function App() {
           </div>
           <div style={{...card,marginBottom:14}}>
             <div style={lbl}>보유 기업</div>
-            {[["Tesla","~20% (19.9%)",R],["SpaceX (SPCX)","~42% (SPCX)",AC],["X","최대주주 (xAI에 포함)",MU],["xAI","SpaceX에 합병",YL],["Neuralink","공동창업자·CEO",MU],["The Boring Co.","창업자·CEO",MU]].map(([n,v,c],i) => (
+            {[["Tesla","~28% (1.12B주)",R],["SpaceX (SPCX)","지분율 미확인",AC],["X","최대주주 (xAI에 포함)",MU],["xAI","SpaceX에 합병",YL],["Neuralink","공동창업자·CEO",MU],["The Boring Co.","창업자·CEO",MU]].map(([n,v,c],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:12}}>
                 <span style={{color:MU}}>{n}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:c,fontSize:10}}>{v}</span>
               </div>
@@ -1674,9 +1687,9 @@ export default function App() {
               <KPI label="에너지" value="$3.14B" sub="+13%" color={AC} />
               <KPI label="서비스/FSD" value="$4.58B" sub="+50%" color={GR} />
               <KPI label="총이익률" value="16.8%" sub="전분기比 -4.3%p" color={R} />
-              <KPI label="EPS(비GAAP)" value="$0.33" sub="컨센 $0.45 하회" color={R} />
+              <KPI label="EPS(GAAP)" value="$0.32" sub="비GAAP $0.33 · 컨센 $0.53~0.55 하회" color={R} />
               <KPI label="R&D 지출" value="$2.37B" sub="매출 8% · YoY +57%" color={AC} badge="NEW" />
-              <KPI label="FCF" value="-$1.09B" sub="음전환 (예고대로)" color={R} />
+              <KPI label="FCF" value="-$1.09B" sub="음전환 실현" color={R} />
             </div>
             {/* CapEx 경고 배너 */}
             <div style={{...card,marginBottom:14,borderColor:"rgba(227,25,55,.5)",background:"var(--red-tint)"}}>
@@ -1686,7 +1699,7 @@ export default function App() {
                   <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:R,letterSpacing:0.5,marginBottom:3}}>2026 CAPEX SHOCK</div>
                   <div style={{fontSize:12,color:TX,lineHeight:1.6}}>
                     2026년 CapEx 가이던스 <strong style={{color:R}}>$25B+</strong> (기존 $20B 대비 25% 상향, 2025년의 3배).
-                    <strong style={{color:YL}}> FCF 음전환 예고</strong> — "몇 년간 지속될 대규모 투자 단계" (머스크)
+                    <strong style={{color:YL}}> FCF 음전환 실현</strong> — "몇 년간 지속될 대규모 투자 단계" (머스크)
                   </div>
                 </div>
               </div>
@@ -1765,10 +1778,10 @@ export default function App() {
                     {[...filtQ].reverse().map((d,i) => (
                       <tr key={d.q} style={{borderBottom:"1px solid rgba(255,255,255,.04)",background:i%2?"var(--card-overlay)":"transparent"}}>
                         <td style={{padding:"5px 8px",color:R,letterSpacing:1}}>{d.q}</td>
-                        <td style={{padding:"5px 8px",textAlign:"right"}}>{d.total.toLocaleString()}</td>
-                        <td style={{padding:"5px 8px",textAlign:"right",color:R}}>{d.auto.toLocaleString()}</td>
-                        <td style={{padding:"5px 8px",textAlign:"right",color:AC}}>{d.energy.toLocaleString()}</td>
-                        <td style={{padding:"5px 8px",textAlign:"right",color:GR}}>{d.services.toLocaleString()}</td>
+                        <td style={{padding:"5px 8px",textAlign:"right"}}>{d.total != null ? d.total.toLocaleString() : "—"}</td>
+                        <td style={{padding:"5px 8px",textAlign:"right",color:R}}>{d.auto != null ? d.auto.toLocaleString() : "—"}</td>
+                        <td style={{padding:"5px 8px",textAlign:"right",color:AC}}>{d.energy != null ? d.energy.toLocaleString() : "—"}</td>
+                        <td style={{padding:"5px 8px",textAlign:"right",color:GR}}>{d.services != null ? d.services.toLocaleString() : "—"}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:d.gm>=20?GR:d.gm>=17?YL:R}}>{d.gm != null ? d.gm+"%" : "—"}</td>
                         <td style={{padding:"5px 8px",textAlign:"right",color:d.opInc>0?"var(--text-1)":"#ff6b6b"}}>{d.opInc != null ? d.opInc.toLocaleString() : "—"}</td>
                         <td style={{padding:"5px 8px",textAlign:"right"}}>{d.eps != null ? "$"+d.eps : "—"}</td>
@@ -1895,7 +1908,7 @@ export default function App() {
               <KPI label="2025 연간 R&D"        value="$6.74B" sub="YoY +46%"            color={AC} />
               <KPI label="Q2'26 CapEx"          value="$5.79B" sub="YoY +142%"           color="#a78bfa" badge="↑" />
               <KPI label="2026 CapEx 가이던스"  value="$25B+"  sub="2025 $8.5B의 3배"   color={R}  badge="⚠" />
-              <KPI label="Terafab 투자액"        value="$3B"    sub="Giga Texas 반도체 팹" color={YL} badge="NEW" />
+              <KPI label="Terafab 투자액"        value="$16.8B+"    sub="SpaceX 주도 1단계 · 텍사스 주지사 발표(8/6)" color={YL} badge="NEW" />
               <KPI label="FCF Q2'26"             value="-$1.09B" sub="음전환 (CapEx 급증)" color={R} />
             </div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
@@ -1937,9 +1950,9 @@ export default function App() {
               <div style={{...lbl,color:YL}}>TERAFAB — 테슬라 반도체 R&D 팹</div>
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14,marginTop:12}}>
                 {[
-                  ["📍 위치","Giga Texas (오스틴)","착공 2026.04.22"],
-                  ["💰 투자","Tesla 단독 $3B","전체 프로젝트: $55B~$119B"],
-                  ["🤝 파트너","Intel (14A 공정)","SpaceX·xAI 공동"],
+                  ["📍 위치","Giga Texas 연구팹 + Grimes County 본 부지","연구팹 2026.04 착공 · 본 부지 8/6 발표"],
+                  ["💰 투자","SpaceX 주도 1단계 $16.8B+ (텍사스 주지사, 8/6)","연구팹 $3B(Tesla) · 전체 $55B~$119B (보도 범위)"],
+                  ["🤝 파트너","Intel 참여 발표(4/7, 역할 미공개)","SpaceX·xAI 공동 · TSMC 협의 보도(10/15)"],
                   ["⚙️ 역할","월 수천 장 웨이퍼","반도체 물리학 검증"],
                   ["🎯 목적","AI5 칩·FSD HW 자체조달","AI 컴퓨팅 독립"],
                   ["📅 전략","15년 장기 프로젝트","고용 유지·증가"],
@@ -1968,8 +1981,8 @@ export default function App() {
               <KPI label="FSD 구독자" value="148만명" sub="Q2'26 · YoY +56%" color={AC} badge="NEW" />
               <KPI label="FSD ARR"    value="$5.46억" sub="연간 반복매출(Q1'26 기준)"     color={GR} />
               <KPI label="FSD 취득률" value="~16%"   sub="누적 인도 920만대 대비" color={YL} badge="NEW" />
-              <KPI label="구독자(월정액)" value="476,100명" sub="$546M ARR"   color={AC} />
-              <KPI label="일시불 구매자"  value="823,900명" sub="2026.02 폐지" color={MU} />
+              <KPI label="분기 추이" value="1.28M→1.48M" sub="2026 Q1→Q2 (공식)" color={AC} />
+              <KPI label="일시불 판매" value="2026.02.14 종료" sub="구독 전용 전환 (보도)" color={MU} />
               <KPI label="FSD 누적 주행" value={(fsdMiles.totalMiles/1e9).toFixed(2)+"B 마일"} sub={"목표 100억 마일 달성! · 일 "+Math.round(fsdMiles.dailyMiles/1e6)+"M 마일"} color={GR} badge="✅" />
             </div>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
@@ -2032,15 +2045,15 @@ export default function App() {
               <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:20,marginTop:14}}>
                 <div>
                   <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:GR,letterSpacing:0.5,marginBottom:8}}>✅ 승인 완료</div>
-                  {[["🇺🇸 미국 (감독하)","FSD v14.3.3 · 전국"],["🇺🇸 로보택시 (무감독)","오스틴·달라스·휴스턴"],["🇨🇦 캐나다","운영 중"],["🇳🇱 네덜란드","유럽 첫 승인"],["🇲🇽 멕시코","운영 중"]].map(([c,s],i) => (
+                  {[["🇺🇸 미국 (감독하)","FSD v14.3.11 · 전국 (10/7 배포, 보도)"],["🇺🇸 로보택시 (무감독)","6곳: 오스틴·달라스·휴스턴·마이애미·올랜도·탬파"],["🇨🇦 캐나다","운영 중"],["🇳🇱 네덜란드","유럽 첫 승인"],["🇲🇽 멕시코","운영 중"]].map(([c,s],i) => (
                     <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
                       <span style={{color:MU}}>{c}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:GR,fontSize:12}}>{s}</span>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:YL,letterSpacing:0.5,marginBottom:8}}>🟡 심사 진행 중 (12개국)</div>
-                  {[["🇨🇳 중국","Q3'26 전면 승인 예상"],["🇧🇪 벨기에","5,000km 테스트 완료"],["🇪🇸 스페인","80,000km 무사고 완료"],["🇬🇧 영국","2026년 승인 예상"],["🇫🇷 프랑스","EU 심의 연동"],["🇦🇺 호주·뉴질랜드","v14 테스트 중"]].map(([c,s],i) => (
+                  <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:YL,letterSpacing:0.5,marginBottom:8}}>🟢 유럽 승인 8개국 (2026.10.08 기준)</div>
+                  {[["🇨🇳 중국","전면 승인 미확인 (당국 발표 없음)"],["🇧🇪 벨기에","승인 완료 (2026.06 보도)"],["🇪🇸 스페인","80,000km 무사고 완료"],["🇬🇧 영국","2026년 승인 예상"],["🇫🇷 프랑스","EU 심의 연동"],["🇦🇺 호주·뉴질랜드","v14 테스트 중"]].map(([c,s],i) => (
                     <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
                       <span style={{color:MU}}>{c}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:YL,fontSize:12}}>{s}</span>
                     </div>
@@ -2106,14 +2119,14 @@ export default function App() {
           {n:"Model 3 / Model Y",  st:"PRODUCTION",        sc:"live",d:"핵심 볼륨 모델. 상하이·프리몬트·베를린 생산. 195만대/년.",ex:"195만대/년",ec:GR},
           {n:"Cybertruck",          st:"PRODUCTION",        sc:"live",d:"스테인리스 풀사이즈 픽업. 텍사스 생산. 수율 안정화.",ex:">12.5만대/년",ec:GR},
           {n:"Cybercab (로보택시)", st:"PRODUCTION → RAMP", sc:"ramp",d:"2026.02 첫 차량 출고, 4월 연속생산 시작. NHTSA 2,500대 상한 제외 확보. 오스틴 전역·텍사스 2개 도시 무감독 운행 확장(2026.06) → 7개 대도시권으로 확대, 누적 유상 250만 마일 돌파(2026.07 Q2 어닝콜). 초기 생산 극도로 느리다가 연말 급증 예상.",ex:"7개 대도시권 운영 · 누적 250만 마일",ec:GR},
-          {n:"Optimus V3",          st:"DEV → PRODUCTION",  sc:"dev", d:"Q1'26 V3 공개. Fremont 라인 설치 중, Q3'26 초도 생산 예정(2026.07 Q2 어닝콜 확인). 목표: 100만대/년 · 단가 $20,000. 2027년 텍사스 2공장.",ex:"Q3'26 초도생산 예정 · 100만대/년 목표",ec:AC},
+          {n:"Optimus V3",          st:"DEV → PRODUCTION",  sc:"dev", d:"Fremont 1세대 생산 라인 설치 중, 2026년 중 생산 계획(Q2 공식, 생산 시작일 미공개). 'volume production' 문구는 2분기 서한에서 삭제(보도). 목표: 100만대/년 · 단가 $20,000. 2027년 텍사스 2공장. V3 공개 행사는 2026-10-15 기준 미확인.",ex:"2026년 중 생산 계획 · 시작일 미공개",ec:AC},
           {n:"Megapack / Powerwall",st:"PRODUCTION·SCALING",sc:"live",d:"에너지 저장. 2025년 $12.8B(+27% YoY). CA·상하이·TX 생산. 2025 배포 46.7GWh(+48%). 2026.06.23 NatPower(이탈리아·영국) $4~5B 계약 체결 — 25GWh 1단계(CA 공장 연산 62.5%), 장기 목표 100GWh·$15B 이상(20년). Autobidder 포함 수직통합.",ex:"NatPower $5B · 46.7GWh 배포",ec:GR},
-          {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"v14.3.4: Cybertruck Smart Summon 추가. 구독자 148만명(+56%). 북미 신규 인도차량 55%↑가 FSD 동시구매 — 이제 FSD가 차량 판매를 견인하는 수요 동인. 네덜란드·벨기에 유럽 승인. 독일·핀란드 선제 승인 검토(EU 공식 결정 10월 예정). 스웨덴 반대 권고(속도위반). 한국 포함 12개국 심사 중.",ex:"독일·핀란드 선제 검토 · ARR $546M",ec:YL},
-          {n:"Tesla Semi",          st:"PILOT PRODUCTION",  sc:"ramp",d:"전기 대형트럭. 2026년 생산 돌입 예정.",ex:"2026년 양산 목표",ec:YL},
+          {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"현재 배포: v14.3.11 (AI4, 2026.33.5, 10/7 배포 시작, 보도). 구독자 148만명(+56%, Q2 공식). 북미 신규 인도차량 55%↑가 FSD 동시구매 — FSD가 차량 판매 동인. 유럽 승인 8개국(2026.10.08 기준). 독일 국내 승인 없음, 핀란드 미결정(6/23), EU 전체 표결 12월 이후. 스웨덴은 속도 오프셋 제거 전 찬성 불가(6/23). 한국: 2025.11 S/X 출시 → 2026.07 미국산 Model 3·Y(HW3)로 부분 확대, 중국산 Model Y 대부분 제외(10/8 국감 보도). 유럽 명칭: Tesla Assisted Driving(TAD).",ex:"유럽 8개국 승인 · EU 표결 12월 이후 · ARR $546M(Q1 기준)",ec:YL},
+          {n:"Tesla Semi",          st:"PRODUCTION",  sc:"ramp",d:"전기 대형트럭. 2026.04.29 네바다 고용량 라인 첫 생산(Semi 공식 게시, 보도 기준). 2분기 서한은 2026 볼륨 목표를 제외하고 배터리 공급을 병목으로 지적(보도).",ex:"네바다 생산 중 · 볼륨 목표 보류",ec:YL},
           {n:"MEGAPOD",              st:"TRADEMARK FILED",   sc:"dev", d:"2026.06.18 USPTO 상표 출원. 모듈형 AI 데이터센터 하드웨어(서버·PDU·냉각 포함). Supercharger 7GW 전력 활용 분산 AI 인프라 구상. Digital Optimus와 연계.",ex:"2026.06.18 출원 · 미출시",ec:AC},
-          {n:"Tesla Roadster (2세대)",st:"REVEAL 예정",        sc:"dev", d:"2026년 8월 공개·데모 이벤트 예정. Musk Q1'26 어닝콜에서 공개 지연 확인. SpaceX 패키지(냉기 추진기) 포함. $200K~250K 예정. 양산 2027년 시작.",ex:"2026.08 공개 예정 · $200K~250K",ec:YL},
-          {n:"Model Y L (장축형)",   st:"UNDER DEVELOPMENT", sc:"dev", d:"4.28m 소형 SUV. 2026년 9월 상하이 양산 시작(AutoForecast). 자율주행 버전 포함 계획. 미국·유럽 생산은 2028년 이후.",ex:"2026.09 상하이 양산 예정",ec:AC},
-          {n:"Terafab",             st:"UNDER CONSTRUCTION",sc:"dev", d:"Giga Texas $3B 반도체 R&D 팹. Intel 14A. SpaceX·xAI 공동. 착공 2026.04.22.",ex:"$3B · Intel 14A · 착공 완료",ec:AC},
+          {n:"Tesla Roadster (2세대)",st:"REVEAL 10/15",        sc:"dev", d:"공개 행사: 8월 목표(6월 보도) → 10/1 → 10/15 19:55 CT로 연기(9/28 공지, 악천후). Musk: 공개 후 양산까지 1년 이상. 가격·출하 시기는 공식 발표 없음.",ex:"10/15 공개 행사 · 가격 미정",ec:YL},
+          {n:"Model Y L (장축형)",   st:"UNDER DEVELOPMENT", sc:"dev", d:"4.28m 소형 SUV. 2026년 9월 상하이 양산 시작 계획(2025년 보도 기준, 2026년 생산 개시 보도는 미확인). 자율주행 버전 포함 계획. 미국·유럽 생산은 2028년 이후.",ex:"상하이 생산 개시 미확인",ec:AC},
+          {n:"Terafab",             st:"UNDER CONSTRUCTION",sc:"dev", d:"Giga Texas 연구팹 2026.04 착공. 본 부지 Grimes County 건설은 테슬라 공식 게시(8/6). $16.8B 이상은 텍사스 주지사가 SpaceX 투자로 발표(테슬라 게시물에는 금액 없음). Intel은 참여만 발표(4/7, 역할 미공개). TSMC와 협의 보도(10/15). Musk(10/7 X): '우리가 짓고 운영한다'.",ex:"연구팹 착공 · 본 부지 Grimes County 건설 확정",ec:AC},
         ].map((p,i) => {
           const sc = {live:{bg:"rgba(16,185,129,.15)",c:GR},ramp:{bg:"rgba(251,191,36,.15)",c:YL},dev:{bg:"rgba(56,189,248,.15)",c:AC}}[p.sc];
           return (
@@ -2170,7 +2183,7 @@ export default function App() {
         <div>
           <div style={{...card,marginBottom:12}}>
             <div style={lbl}>2026 핵심 모니터링</div>
-            {[["🔴 스웨덴·NHTSA FSD 안전성 조사","유럽 확장 지연 최대 변수",R],["🔴 FSD 안전성 美상원·EU 조사","로보택시 확장 지연 변수",R],["🔴 CapEx $25B 집행 속도","FCF 음전환 타이밍",R],["🔴 Cybercab 양산 전환","핵심 밸류에이션 변수",R],["🔴 Optimus 2026 생산량","머스크 '예측 불가'",R],["🟡 FSD 중국 전면 승인","Q3'26 목표",YL],["🟡 Terafab 건설 진척","Intel 파트너십",YL],["🟡 FSD 구독자 증가율","CEO 보상 마일스톤",YL],["🟢 에너지 사업 성장","안정 +27%",GR],["🟢 FSD ARR $546M","고마진 반복매출",GR]].map(([l,v,c],i) => (
+            {[["🔴 스웨덴·NHTSA FSD 안전성 조사","유럽 확장 지연 최대 변수",R],["🔴 FSD 안전성 美상원·EU 조사","로보택시 확장 지연 변수",R],["🔴 CapEx $25B 집행 속도","FCF 음전환 타이밍",R],["🔴 Cybercab 양산 전환","핵심 밸류에이션 변수",R],["🔴 Optimus 2026 생산량","머스크 '예측 불가'",R],["🔴 NHTSA EA26002 FSD 공학분석","대상 약 320만 대 · 사고 9건(사망 1)",R],["🔴 NHTSA AQ26002 사이버캡 인증 감사","9/3 개시 · 특별명령 21항목",R],["🟡 NHTSA DP26010 로보택시 과속 청원","약 1,000대 추정 · 10/9 개시",YL],["🟡 캘리포니아 인종차별 재판(Fremont)","9/21~10/30 진행",YL],["🟢 SEC 트위터 공시 소송","$1.5M 합의 승인(7/8)",GR],["🟢 Autopilot 사망 소송","합의 후 기각(9/2)",GR],["🟡 FSD 중국 전면 승인","당국 발표 미확인 (Q3'26 목표 종료)",YL],["🟡 Terafab 건설 진척","Intel 파트너십",YL],["🟡 FSD 구독자 증가율","CEO 보상 마일스톤",YL],["🟢 에너지 사업 성장","안정 +27%",GR],["🟢 FSD ARR $546M","고마진 반복매출",GR]].map(([l,v,c],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
                 <span style={{color:MU}}>{l}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:c,fontSize:12}}>{v}</span>
               </div>
@@ -2183,8 +2196,8 @@ export default function App() {
         <div style={lbl}>종합 결론</div>
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:20,marginTop:12}}>
           {[
-            ["TESLA 2026 투자 테제",R,"CapEx $25B 가이던스대로 Q2 집행되며 마진 압박 현실화 — 총이익률 16.8%·영업이익률 1.4%, 예고됐던 FCF 적자전환(-$1.09B)도 실현. AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조는 유지. FSD 구독 148만명(+56% YoY)이 버퍼 역할. Q2'26 실적(2026.07.22 발표): 매출 역대최고 $28.2B, EPS는 컨센 $0.45 대비 $0.33으로 하회."],
-            ["FSD → ROBOTAXI → OPTIMUS 로드맵",AC,"FSD 취득률 14%·구독 전용 전환이 반복 수익 기반 구축. 10억 마일 목표 도달 시 무감독 FSD 전면화. Robotaxi 확장 → Optimus 양산이 순차적 밸류에이션 리레이팅 핵심."],
+            ["TESLA 2026 투자 테제",R,"CapEx $25B 가이던스대로 Q2 집행되며 마진 압박 현실화 — 총이익률 16.8%·영업이익률 1.4%, 예고됐던 FCF 적자전환(-$1.09B)도 실현. AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조는 유지. FSD 구독 148만명(+56% YoY)이 버퍼 역할. Q2'26 실적(2026.07.22 발표): 매출 $28.2B로 기관 취합 컨센 $27.6B 상회(역대 최고 표현은 2차 출처 기준), 비GAAP EPS $0.33은 컨센 $0.53~0.55 하회."],
+            ["FSD → ROBOTAXI → OPTIMUS 로드맵",AC,"FSD 취득률 14%·구독 전용 전환이 반복 수익 기반 구축. 머스크: 무감독 FSD에는 실주행 약 100억 마일 필요(2026.01 발언). 누적 주행은 보도 기준 120억 근접(공식 미확인). Robotaxi 확장 → Optimus 양산이 순차적 밸류에이션 리레이팅 핵심."],
           ].map(([t,c,d],i) => (
             <div key={i}>
               <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:c,letterSpacing:0.5,marginBottom:8}}>{t}</div>
@@ -2366,8 +2379,8 @@ export default function App() {
         </div>
 
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(auto-fill,minmax(130px,1fr))",gap:isMobile?8:10,marginBottom:14}}>
-          <KPI label="총 발행주식" value="~3.76B주"  sub="2026.06" />
-          <KPI label="일론 머스크" value="19.9%"     sub="1.12B주 (6/16 옵션행사)"  color={R} />
+          <KPI label="총 발행주식" value="~3.95B주"  sub="2026.07.16 (10-Q)" />
+          <KPI label="일론 머스크" value="~28.4%"     sub="1.12B주 (6/16 옵션행사, Form 4)"  color={R} />
           <KPI label="기관 투자자" value="41.7%"     sub="4,500+ 기관" color={AC} />
           <KPI label="리테일"      value="35.1%"     sub="~1.17B주" color={GR} />
           <KPI label="내부자 합계" value="23.2%"     sub="머스크 외 임원" color={YL} />
@@ -2411,10 +2424,10 @@ export default function App() {
 
         {/* 한국인 보유 KPI */}
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:8,marginBottom:12}}>
-          <KPI label="보관금액 (2026.07.02)" value="$230.0억" sub="약 35.17조원" color={AC} />
+          <KPI label="보관금액 (2026.10.05)" value="$221억" sub="1위 · 2위 엔비디아 $192억 (언론 보도)" color={AC} />
           <KPI label="투자자 수 (Q2'25)" value="70.2만명" sub="해외주식 최다" color={GR} />
-          <KPI label="1인 평균 보유" value="78.4주" sub="중앙값 10~30주" />
-          <KPI label="추정 지분율" value="~1.4%" sub="3.76B주 기준" color={YL} />
+          <KPI label="해외주식 보관 순위" value="1위" sub="테슬라 · 2026.10.05 기준 (보도)" />
+          <KPI label="보관액 ÷ 시총" value="~1.5%" sub="10/5 보관액 $22.1B ÷ 10/14 시총 (기준일 상이)" color={YL} />
         </div>
 
         {/* KSD 분기별 보관금액 추이 */}
@@ -2424,7 +2437,8 @@ export default function App() {
             {[
               {q:"2025 상반기",date:"2025.07.14 발표",amt:"$212.94억",won:"약 29.4조원",rank:"해외주식 1위",chg:"+전분기 대비 상승",color:GR},
               {q:"2025 Q3",date:"2025.10.27 발표",amt:"$274억",won:"약 39.2조원",rank:"해외주식 1위",chg:"+28.8% QoQ",color:GR},
-              {q:"2026.07.02",date:"2026.07.04 SEIBro 확정",amt:"$230.0억",won:"약 35.17조원",rank:"해외주식 1위",chg:"+9.1% YoY (vs 210.8억)",color:GR},
+              {q:"2026.10.05",date:"2026.10.05 기준 (언론 보도)",amt:"$221억",won:"2위 엔비디아 $192억",rank:"해외주식 1위",chg:"2026.07.02 원출처 $230.0억은 교차확인 미완",color:GR},
+              {q:"2026.07.02",date:"2026.07.04 (원출처 스크린샷, 기사 교차확인 미완)",amt:"$230.0억",won:"약 35.17조원",rank:"해외주식 1위",chg:"+9.1% YoY (vs 210.8억, 미검증)",color:MU},
             ].map((d,i) => (
               <div key={i} style={{background:SF2,borderRadius:8,padding:"12px 14px",border:"0.5px solid rgba(255,255,255,0.07)"}}>
                 <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,fontWeight:700,color:d.color,marginBottom:4}}>{d.q}</div>
@@ -2444,7 +2458,7 @@ export default function App() {
                   연도별 7월 2일 기준 · 한국 투자자 테슬라 보관금액
                 </div>
                 <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:MU,marginTop:2}}>
-                  2019 → 2026 · 8년간 <span style={{color:GR,fontWeight:700}}>약 251배 성장</span> · 순위 21위 → 1위
+                  2019 → 2026 · 7년간 <span style={{color:GR,fontWeight:700}}>약 256배(계산값)</span> · 2024 외 연도는 원문 교차확인 미완
                 </div>
               </div>
               <div style={{background:"rgba(99,153,34,.15)",border:"0.5px solid "+GR+"40",borderRadius:4,padding:"3px 10px"}}>
@@ -2510,7 +2524,7 @@ export default function App() {
                 {" · 한국예탁결제원 · 정리 @ohmahahm"}
               </div>
               <div style={{fontFamily:"'JetBrains Mono',monospace"}}>
-                환율 1,529.30원 기준(2026) · 2022=7/1, 2023=6/30
+                환율 1,529.30원 기준(2026 집계, 기준일 미확인) · 2022=7/1, 2023=6/30
               </div>
             </div>
           </div>
@@ -2540,8 +2554,8 @@ export default function App() {
           <div style={{marginTop:12,padding:"8px 12px",background:"rgba(0,212,255,0.05)",border:"0.5px solid rgba(0,212,255,0.2)",borderRadius:6}}>
             <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,lineHeight:1.8}}>
               {"💡 "}
-              <span style={{color:AC,fontWeight:600}}>상위 1% 미만이 전체 지분 50% 이상 보유</span>
-              {" — 한국인 테슬라 투자도 양극화. 1인당 평균 78.4주이나 실제 절반 이상은 10~30주 보유. 일론 머스크가 한국인 투자자를 가리켜 "}<span style={{color:TX}}>{"\"Smart people\""}</span>{" 이라 언급한 바 있음."}
+              <span style={{color:AC,fontWeight:600}}>해외주식 보관 1위 종목: 테슬라</span>
+              {" — 한국인 테슬라 투자 규모는 2026.07.02 기준 $230.0억(SEIBro, 출처: 예탁결제원)."}
             </div>
           </div>
         </div>
@@ -2564,7 +2578,7 @@ export default function App() {
               <div style={{fontSize:10,color:MU}}>{"공시일 기준 최신순 · 현재가 $"+curPrice.toFixed(2)+" 기준 상승여력"}</div>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {[["컨센서스 평균","$395 (33개 기관)",MU],["최고 목표가","$4,600 (ARK)",GR],["최저 목표가","$24.86 (GLJ)",R]].map(([l,v,c],i) => (
+              {[["집계 평균 목표가","$397.83 (44명, 10/15)",MU],["최고 목표가 (집계)","$600",GR],["최저 목표가 (집계)","$128.11 · GLJ $24.86",R]].map(([l,v,c],i) => (
                 <div key={i} style={{background:c+"10",border:"1px solid "+c+"30",borderRadius:3,padding:"5px 12px",textAlign:"center"}}>
                   <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:MU,letterSpacing:1,marginBottom:2}}>{l}</div>
                   <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:13,fontWeight:700,color:c}}>{v}</div>
@@ -2621,8 +2635,8 @@ export default function App() {
             </table>
           </div>
           <div style={{marginTop:10,padding:"7px 10px",background:"rgba(255,255,255,.025)",borderRadius:3,fontSize:10,color:MU,lineHeight:1.8}}>
-            {"📌 ARK $4,600 vs JPMorgan 구 $145 → 신 $475 — 월가 역대 최대 견해 차이"}<br/>
-            {"📌 현재가 $"+curPrice.toFixed(0)+" 기준 컨센서스 $404~420 — 현재가와 유사, 즉 '적정 가격' 판단 우세"}
+            {"📌 ARK $4,600은 최신 출처 확인 불가 (확인된 최신값 $2,600, 2024.06) · JPMorgan $475(2026.06.05)"}<br/>
+            {"📌 현재가 $"+curPrice.toFixed(0)+" 기준 · 집계 평균 $397.83 (StockAnalysis 10/15, 44명) / MarketBeat 평균 $412.33 (46명)"}
           </div>
         </div>
 
@@ -2866,7 +2880,7 @@ export default function App() {
               {[
                 {label:"시가총액",value:mktCap,sub:"2026.06"},
                 {label:"총이익률",value:"16.8%",sub:"Q2'26"},
-                {label:"Q2'26 EPS",value:"$0.33",sub:"컨센 $0.45 하회"},
+                {label:"Q2'26 EPS(GAAP)",value:"$0.32",sub:"비GAAP $0.33 · 컨센 $0.53~0.55 하회"},
                 {label:"기준일",value:stock.date.slice(5),sub:"Yahoo Finance"},
               ].map((k,i) => (
                 <div key={i} style={{background:"var(--bg-card)",border:"1px solid var(--border)",borderRadius:12,padding:"12px 14px"}}>
