@@ -226,6 +226,16 @@ const ROBO_MANUAL = {
   txRegistered: 1244, trips: 8804,
   news: ["Fort Worth 출시 (11/2, 텍사스 4번째 도시)", "운영시간 6am~2am (10/30)", "Houston 서비스 지역 확대 (10/26)", "NHTSA 사고 보고 65건 · 최근 90일 15건"],
 };
+/* ── FSD 누적 마일: tesla.com/fsd/safety 공식 카운터 직접 확인(2026-11-03 04:55 UTC). dailyMiles=카운터 증가 속도 실측(≈45M/일). 충돌 통계(collisionPer·vsHuman)는 2026-05-03 값 그대로(미갱신) ── */
+const FSD_MILES_BASE = {
+  totalMiles: 17022307136,
+  cityMiles:  6765007492,
+  dailyMiles: 45200000,
+  updatedDate: "2026-11-03",
+  collisionPer: 5300000,
+  vsHuman: 660000,
+  collisionAsOf: "2026-05-03",
+};
 /* ── 보통주 발행주식수: 10-Q 표지 2026-07-16 기준 3,949,547,394주 (Worker 값 3.76은 구버전) ── */
 const SHARES_OUT_B = 3.9495;
 
@@ -1044,14 +1054,7 @@ export default function App() {
     volume:"31.0M", date:"2026-10-14", shares:SHARES_OUT_B,
   });
   const [ldStock, setLdStock] = useState(false);
-  const [fsdMiles, setFsdMiles] = useState({
-    totalMiles: 10010684206,
-    cityMiles:  3761203620,
-    dailyMiles: 28800000,
-    updatedDate: "2026-05-03",
-    collisionPer: 5300000,
-    vsHuman: 660000,
-  });
+  const [fsdMiles, setFsdMiles] = useState(FSD_MILES_BASE);
   const [ldFsd, setLdFsd] = useState(false);
 
   // ── VISITOR COUNTER ──────────────────────────────────────────────
@@ -1125,7 +1128,7 @@ export default function App() {
           }
         } catch(e2) { /* Worker 불가 시 저장값 유지 */ }
         const fsdVal = await LS.get("tsla:fsd");
-        if (fsdVal?.value) setFsdMiles(JSON.parse(fsdVal.value));
+        if (fsdVal?.value) { const sv = JSON.parse(fsdVal.value); if ((sv.updatedDate || "") > FSD_MILES_BASE.updatedDate) setFsdMiles(sv); }
       } catch(e) { /* storage unavailable, use defaults */ }
       // ── 방문자 카운팅 (Cloudflare Workers KV) ──────────────────
       try {
@@ -1395,7 +1398,7 @@ export default function App() {
             </div>
             {roboLatest && (
               <div style={{textAlign:"right",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"var(--text-3)"}}>
-                <div>기준일: {roboLatest.date}</div>
+                <div>기준일: {roboLatest.date < ROBO_MANUAL.date ? `${ROBO_MANUAL.date} (수동) · 자동 수집분 ${roboLatest.date}` : roboLatest.date}</div>
                 <div style={{marginTop:2}}>
                   갱신: {roboMeta.updatedAt ? new Date(roboMeta.updatedAt).toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "—"}
                 </div>
@@ -1438,6 +1441,9 @@ export default function App() {
             </div>
           ) : (
             <>
+              {roboLatest.date < ROBO_MANUAL.date && (
+                <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:11,color:"#fb923c",marginBottom:6}}>⚠ 아래는 자동 수집 값({roboLatest.date} 기준, 수집 중단 · 최신 아님)</div>
+              )}
               {/* KPI 그리드 6개 */}
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10,marginBottom:12}}>
                 <KPI label="Rider Vehicles"  value={roboLatest.riderVehicles ?? "—"} sub="30d active"      color={AC} />
@@ -2069,9 +2075,9 @@ export default function App() {
                           <span>목표 100억 마일</span>
                         </div>
                         <div style={{marginTop:14,fontSize:11,color:MU,lineHeight:1.7}}>
-                          📌 <strong style={{color:GR}}>2026.05.03 공식 100억 마일 돌파</strong> — Tesla X 공식 발표<br/>
+                          📌 <strong style={{color:GR}}>2026.05.03 100억 마일 돌파 → {fsdMiles.updatedDate.replace(/-/g,".")} 공식 카운터 {(fsdMiles.totalMiles/1e9).toFixed(1)}B 마일</strong><br/>
                           📌 도심 주행: {(fsdMiles.cityMiles/1e9).toFixed(2)}B 마일 (전체의 {cityPct}%)<br/>
-                          📌 현재 일 {Math.round(fsdMiles.dailyMiles/1e6)}M 마일 추가 중 · 충돌 1건/{""+Math.round(fsdMiles.collisionPer/1e6)}M 마일<br/>
+                          📌 현재 일 {Math.round(fsdMiles.dailyMiles/1e6)}M 마일 추가 중 · 충돌 1건/{""+Math.round(fsdMiles.collisionPer/1e6)}M 마일 ({(fsdMiles.collisionAsOf||"기준일 미상")} 기준 통계)<br/>
                           📌 vs 미국 평균 운전자: 충돌 1건/{""+Math.round(fsdMiles.vsHuman/1000)+"K"} 마일 (<strong style={{color:GR}}>{""+Math.round(fsdMiles.collisionPer/fsdMiles.vsHuman)+"배 안전"}</strong>)<br/>
                           📌 <strong style={{color:TX}}>데이터 출처: tesla.com/VehicleSafetyReport (공식)</strong>
                         </div>
@@ -2238,7 +2244,7 @@ export default function App() {
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:20,marginTop:12}}>
           {[
             ["TESLA 2026 투자 테제",R,"Q3'26 실적(2026.10.21 발표): 매출 $28.0B로 전년 대비 사실상 보합(-0.2%), 총이익률은 19.6%로 Q2(16.8%)보다 개선. 영업이익 $0.72B·GAAP EPS $0.22로 전년 대비 크게 감소. FCF는 +$1.53B로 Q2 적자에서 흑자 전환했지만 R&D $2.76B·CapEx $4.73B 투자 부담은 계속. AI 인프라·Optimus·Terafab 투자가 2027~28년 수익으로 연결되는 구조는 유지. FSD 구독 174만명(+67% YoY)이 버퍼 역할."],
-            ["FSD → ROBOTAXI → OPTIMUS 로드맵",AC,"FSD 취득률 14%·구독 전용 전환이 반복 수익 기반 구축. 머스크: 무감독 FSD에는 실주행 약 100억 마일 필요(2026.01 발언). 누적 주행은 보도 기준 120억 근접(공식 미확인). Robotaxi 확장 → Optimus 양산이 순차적 밸류에이션 리레이팅 핵심."],
+            ["FSD → ROBOTAXI → OPTIMUS 로드맵",AC,"FSD 취득률 14%·구독 전용 전환이 반복 수익 기반 구축. 머스크: 무감독 FSD에는 실주행 약 100억 마일 필요(2026.01 발언). 누적 주행은 Tesla 공식 카운터 기준 약 170억 마일(2026-11-03). Robotaxi 확장 → Optimus 양산이 순차적 밸류에이션 리레이팅 핵심."],
           ].map(([t,c,d],i) => (
             <div key={i}>
               <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:12,color:c,letterSpacing:0.5,marginBottom:8}}>{t}</div>
