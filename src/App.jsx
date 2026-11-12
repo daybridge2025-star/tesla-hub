@@ -544,10 +544,10 @@ const CEO_TL = [
   {y:"2025",t:"Tesla $1조 보상안 승인",d:"주주총회에서 차량 2,000만대·시총 $8.5조 등 10년 목표 달성 시 최대 $1조 규모 스톡옵션 패키지 승인. 트릴리어네어 등극의 첫 번째 경로."},
   {y:"2025",t:"DOGE 수장 → 5월 퇴임",d:"트럼프 2기 DOGE 수장 합류 → 4개월 만에 퇴임, Tesla CEO 복귀."},
   {y:"2026.02",t:"SpaceX-xAI 합병",d:"xAI를 SpaceX에 합병. Grok이 Digital Optimus를 지휘하는 통합 AI 아키텍처 공식화. SpaceX 밸류에이션이 약 $1조로 상승하는 결정적 계기."},
-  {y:"2026.06",t:"SpaceX 나스닥 상장 — 역대 최대 IPO",d:"6/12 SPCX 티커로 상장. 공모가 $135 → 첫날 $150 마감, 밸류에이션 약 $1.77조. $75B 조달로 역대 최대 IPO. 머스크 SpaceX 지분가치 약 $690~866억 추산. 6/24 $250억 채권 발행(브릿지론 $175억 상환 목적, 현금보유 $1,008억)."},
+  {y:"2026.06",t:"SpaceX 나스닥 상장 — 역대 최대 IPO",d:"6/12 SPCX 티커로 상장. 공모가 $135 → 첫날 시가 $150·종가 $160.95(+19%, NBC 보도). $75B 조달로 역대 최대 IPO. 머스크 SpaceX 지분가치 약 $690~866억 추산. 6/24 $250억 채권 발행(브릿지론 $175억 상환 목적, 현금보유 $1,008억)."},
   {y:"2026.06",t:"세계 최초 '트릴리어네어' 등극",d:"SpaceX 상장 직후 순자산 약 $1.05~1.1조 달성, 인류 역사상 최초의 1조 달러 자산가. Tesla 지분 + SpaceX 지분 합산. 2위 Larry Page와 약 $700B 이상 격차."},
   {y:"2026.06",t:"2018년 보상안 행사 — 지분 약 28% 수준",d:"6/16 옵션 행사로 3.04억주 취득(행사가 $23.34, Form 4 확인). 세금 원천징수 1,753만주 차감 후 순증 약 2.86억주. 직접 보유 7.10억주 + 별도 보유 4.13억주 = 총 약 11.2억주 → 발행주식 3.95B 기준 약 28.4%(기존 19.9% 표기는 기준 불명으로 정정). 신규 주식은 2028년 1월까지 베스팅 후 5년 락업(2033년까지 매도 불가)."},
-  {y:"2026",t:"물리적 AI 전환 가속",d:"Terafab 착공(Giga Texas 연구팹 4월, 본 부지 Grimes County 8월 발표), Model S·X 단종, Robotaxi 7개 도시 운영(텍사스 4·플로리다 3, Fort Worth 11/2 출시 · 무감독 604대, 11/3 Robotaxi Tracker), MEGAPOD 상표 출원(2026.06), Roadster 공개 행사 10/15 예정(8월→10/1→10/15 연기). NatPower $5B 메가팩 계약(유럽 역대 최대). Cars.com 6년 연속 미국산 차량 1위(Model 3 #1, Model Y #2)."},
+  {y:"2026",t:"물리적 AI 전환 가속",d:"Terafab 착공(Giga Texas 연구팹 4월, 본 부지 Grimes County 8월 발표), Model S·X 단종, Robotaxi 7개 도시 운영(텍사스 4·플로리다 3, Fort Worth 11/2 출시 · 무감독 604대, 11/3 Robotaxi Tracker), MEGAPOD 상표 출원(2026.06), Roadster 10/15 텍사스 McGregor에서 공개(가격 미공개, 양산 목표 2028 보도). NatPower $5B 메가팩 계약(유럽 역대 최대). Cars.com 6년 연속 미국산 차량 1위(Model 3 #1, Model Y #2)."},
 ];
 
 const CEO_MILESTONES = [
@@ -1537,7 +1537,7 @@ export default function App() {
           <KPI label="매출총이익률"     value="19.6%"      sub="전분기比 +2.8%p" color={GR} />
           <KPI label="FSD 구독자"       value="174만명"    sub="Q3'26 · YoY +67%" color={YL} />
           <KPI label="FSD ARR"          value="$5.46억"    sub="연간 반복매출" color={GR} badge="NEW" />
-          <KPI label="2026 CapEx 가이던스" value="$25B+"  sub="기존 $20B → 상향" color={R} badge="↑" />
+          <KPI label="2026 CapEx 가이던스" value="약 $20B"  sub="기존 $25B+ → 하향 (Q3 콜, 보도)" color={YL} badge="↓" />
           <KPI label="현금 & 투자"      value="$45.4B"    sub="Q3'26 기준 · 현금·단기투자" />
           <KPI label="52주 범위"        value={rangeVal}   sub={rangeSub} color={MU} />
         </div>
@@ -1549,7 +1549,7 @@ export default function App() {
             {[
               ["🔴 Model S·X 단종","Q2'26 생산 종료. Fremont → Optimus 100만대/년 전환.",R],
               ["🔵 Terafab 착공","Giga Texas 연구팹 2026.04 착공 · 본 부지 Grimes County 건설 확정(8/6). 투자 $16.8B+는 SpaceX 발표.",AC],
-              ["🟡 CapEx $25B+ 선언","2026 자본지출 $25B+ (2025 $8.5B의 3배). AI·Optimus·Cybercab.",YL],
+              ["🟡 CapEx 가이던스 하향","2026 자본지출 약 $20B로 하향(Q3 콜, 기존 $25B+ · 보도 기준, 녹취 미확인). 2025 $8.5B의 약 2.4배. AI·Optimus·Cybercab.",YL],
               ["🟢 Robotaxi 확장","7개 도시 · 무감독 604대(30일 +222) · Cybercab 243대 · 무감독 누적 3.11M 마일(10/18, 테슬라 집계). Fort Worth 11/2 출시(텍사스 4번째), Houston 서비스 지역 확대(10/26), 운영시간 6am~2am(10/30). 출처: Robotaxi Tracker 11/3. FSD v14.3.11 배포 중(10/7, 보도).",GR],
             ].map(([t,d,c],i) => (
               <div key={i} style={{background:c+"0d",border:"1px solid "+c+"30",borderRadius:3,padding:"12px 14px"}}>
@@ -1745,7 +1745,7 @@ export default function App() {
                 <div>
                   <div style={{fontFamily:"'Pretendard',sans-serif",fontSize:10,color:R,letterSpacing:0.5,marginBottom:3}}>2026 CAPEX SHOCK</div>
                   <div style={{fontSize:12,color:TX,lineHeight:1.6}}>
-                    2026년 CapEx 가이던스 <strong style={{color:R}}>$25B+</strong> (기존 $20B 대비 25% 상향, 2025년의 3배).
+                    2026년 CapEx 가이던스 <strong style={{color:R}}>약 $20B</strong> (Q3 콜에서 기존 $25B+ 대비 하향, 보도 기준 · 2025년의 약 2.4배).
                     <strong style={{color:GR}}> FCF 흑자 전환(Q3'26)</strong> — "몇 년간 지속될 대규모 투자 단계" (머스크)
                   </div>
                 </div>
@@ -1954,7 +1954,7 @@ export default function App() {
               <KPI label="Q3'26 R&D"           value="$2.76B" sub="매출 9.8% · YoY +69%" color={AC} badge="NEW" />
               <KPI label="2025 연간 R&D"        value="$6.74B" sub="YoY +46%"            color={AC} />
               <KPI label="Q3'26 CapEx"          value="$4.73B" sub="YoY +110%"           color="#a78bfa" badge="↑" />
-              <KPI label="2026 CapEx 가이던스"  value="$25B+"  sub="2025 $8.5B의 3배"   color={R}  badge="⚠" />
+              <KPI label="2026 CapEx 가이던스"  value="약 $20B"  sub="기존 $25B+ 하향 · 2025의 2.4배"   color={YL}  badge="↓" />
               <KPI label="Terafab 투자액"        value="$16.8B+"    sub="SpaceX 주도 1단계 · 텍사스 주지사 발표(8/6)" color={YL} badge="NEW" />
               <KPI label="FCF Q3'26"             value="+$1.53B" sub="Q2 -$1.09B에서 흑자 전환 (Q3'25 $3.99B)" color={GR} />
             </div>
@@ -2171,7 +2171,7 @@ export default function App() {
           {n:"FSD",                 st:"SCALING",           sc:"ramp",d:"현재 배포: v14.3.11 (AI4, 2026.33.5, 10/7 배포 시작, 보도). 구독자 174만명(+67%, Q3 공식). 북미 신규 인도차량 55%↑가 FSD 동시구매 — FSD가 차량 판매 동인. 유럽 승인 8개국(2026.10.08 기준). 독일 국내 승인 없음, 핀란드 미결정(6/23), EU 전체 표결 12월 이후. 스웨덴은 속도 오프셋 제거 전 찬성 불가(6/23). 한국: 2025.11 S/X 출시 → 2026.07 미국산 Model 3·Y(HW3)로 부분 확대, 중국산 Model Y 대부분 제외(10/8 국감 보도). 유럽 명칭: Tesla Assisted Driving(TAD).",ex:"유럽 8개국 승인 · EU 표결 12월 이후 · ARR $546M(Q1 기준)",ec:YL},
           {n:"Tesla Semi",          st:"PRODUCTION",  sc:"ramp",d:"전기 대형트럭. 2026.04.29 네바다 고용량 라인 첫 생산(Semi 공식 게시, 보도 기준). 2분기 서한은 2026 볼륨 목표를 제외하고 배터리 공급을 병목으로 지적(보도).",ex:"네바다 생산 중 · 볼륨 목표 보류",ec:YL},
           {n:"MEGAPOD",              st:"TRADEMARK FILED",   sc:"dev", d:"2026.06.18 USPTO 상표 출원. 모듈형 AI 데이터센터 하드웨어(서버·PDU·냉각 포함). Supercharger 7GW 전력 활용 분산 AI 인프라 구상. Digital Optimus와 연계.",ex:"2026.06.18 출원 · 미출시",ec:AC},
-          {n:"Tesla Roadster (2세대)",st:"REVEAL 10/15",        sc:"dev", d:"공개 행사: 8월 목표(6월 보도) → 10/1 → 10/15 19:55 CT로 연기(9/28 공지, 악천후). Musk: 공개 후 양산까지 1년 이상. 가격·출하 시기는 공식 발표 없음.",ex:"10/15 공개 행사 · 가격 미정",ec:YL},
+          {n:"Tesla Roadster (2세대)",st:"UNVEILED 10/15",      sc:"dev", d:"10/15 19:55 CT 텍사스 McGregor(SpaceX 시험장)에서 공개(8월→10/1→10/15 연기 끝에 개최, 보도). 트림 3종, 최종 가격은 공개되지 않음. 양산 목표 2028(머스크 발언 보도, 2차 출처 — 공식 페이지 확인 필요).",ex:"10/15 공개 · 가격 미공개 · 양산 목표 2028",ec:YL},
           {n:"Model Y L (장축형)",   st:"UNDER DEVELOPMENT", sc:"dev", d:"4.28m 소형 SUV. 2026년 9월 상하이 양산 시작 계획(2025년 보도 기준, 2026년 생산 개시 보도는 미확인). 자율주행 버전 포함 계획. 미국·유럽 생산은 2028년 이후.",ex:"상하이 생산 개시 미확인",ec:AC},
           {n:"Terafab",             st:"UNDER CONSTRUCTION",sc:"dev", d:"Giga Texas 연구팹 2026.04 착공. 본 부지 Grimes County 건설은 테슬라 공식 게시(8/6). $16.8B 이상은 텍사스 주지사가 SpaceX 투자로 발표(테슬라 게시물에는 금액 없음). Intel은 참여만 발표(4/7, 역할 미공개). TSMC와 협의 보도(10/15). Musk(10/7 X): '우리가 짓고 운영한다'.",ex:"연구팹 착공 · 본 부지 Grimes County 건설 확정",ec:AC},
         ].map((p,i) => {
@@ -2193,7 +2193,7 @@ export default function App() {
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginTop:12}}>
           {[
             ["BULL","$1,200+",GR,"rgba(16,185,129,.08)","rgba(16,185,129,.2)","Robotaxi 네트워크 효과·Optimus 대량생산·FSD 전세계 승인·Terafab 칩 자체조달"],
-            ["BASE 2026","$350~450","var(--text-1)","var(--red-tint)",BD,"CapEx $25B 부담·Cybercab 양산 지연·유럽 FSD 지연"],
+            ["BASE 2026","$350~450","var(--text-1)","var(--red-tint)",BD,"CapEx $20B 부담·Cybercab 양산 지연·유럽 FSD 지연"],
             ["VISION 2030","$700~1,000",YL,"rgba(251,191,36,.08)","rgba(251,191,36,.2)","자동차 46%→, Robotaxi·Optimus·에너지 분산. AI 플랫폼 기업 전환"],
           ].map(([l,v,vc,bg,br,d],i) => (
             <div key={i} style={{background:bg,border:"1px solid "+br,borderRadius:4,padding:14}}>
@@ -2214,7 +2214,7 @@ export default function App() {
       <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:14,marginBottom:14}}>
         <div style={card}>
           <div style={lbl}>핵심 리스크 레이더</div>
-          {[["CapEx $25B 과부하",90,R,"NEW"],["FSD 안전성 美상원·EU 조사",88,R,"NEW"],["스웨덴 FSD 반대↔독일 선제 승인",82,YL,"NEW"],["NHTSA Model 3 충돌 조사",82,R,"NEW"],["경쟁 심화 (BYD·中)",80,R,null],["FSD 규제 지연",78,R,null],["머스크 집중 리스크",75,R,null],["Optimus 생산 불확실성",70,YL,"NEW"],["유럽 브랜드 부진",68,YL,null],["Terafab 실행 리스크",62,YL,"NEW"],["배터리 공급 제약",50,YL,null],["재무 유동성",22,GR,null]].map(([l,p,c,badge],i) => (
+          {[["CapEx $20B 과부하",90,R,"NEW"],["FSD 안전성 美상원·EU 조사",88,R,"NEW"],["스웨덴 FSD 반대↔독일 선제 승인",82,YL,"NEW"],["NHTSA Model 3 충돌 조사",82,R,"NEW"],["경쟁 심화 (BYD·中)",80,R,null],["FSD 규제 지연",78,R,null],["머스크 집중 리스크",75,R,null],["Optimus 생산 불확실성",70,YL,"NEW"],["유럽 브랜드 부진",68,YL,null],["Terafab 실행 리스크",62,YL,"NEW"],["배터리 공급 제약",50,YL,null],["재무 유동성",22,GR,null]].map(([l,p,c,badge],i) => (
             <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginTop:11}}>
               <div style={{width:140,fontSize:10,color:MU,flexShrink:0,display:"flex",alignItems:"center",gap:5}}>
                 {l}
@@ -2230,7 +2230,7 @@ export default function App() {
         <div>
           <div style={{...card,marginBottom:12}}>
             <div style={lbl}>2026 핵심 모니터링</div>
-            {[["🔴 스웨덴·NHTSA FSD 안전성 조사","유럽 확장 지연 최대 변수",R],["🔴 FSD 안전성 美상원·EU 조사","로보택시 확장 지연 변수",R],["🔴 CapEx $25B 집행 속도","FCF 음전환 타이밍",R],["🔴 Cybercab 양산 전환","핵심 밸류에이션 변수",R],["🔴 Optimus 2026 생산량","머스크 '예측 불가'",R],["🔴 NHTSA EA26002 FSD 공학분석","대상 약 320만 대 · 사고 9건(사망 1)",R],["🔴 NHTSA AQ26002 사이버캡 인증 감사","9/3 개시 · 특별명령 21항목",R],["🟡 NHTSA 로보택시 사고 보고","65건 접수·최근 90일 15건·ADS 작동 100% (Robotaxi Tracker 집계, 9월 접수분까지)",YL],["🟡 NHTSA DP26010 로보택시 과속 청원","약 1,000대 추정 · 10/9 개시",YL],["🟡 캘리포니아 인종차별 재판(Fremont)","9/21~10/30 진행",YL],["🟢 SEC 트위터 공시 소송","$1.5M 합의 승인(7/8)",GR],["🟢 Autopilot 사망 소송","합의 후 기각(9/2)",GR],["🟡 FSD 중국 전면 승인","당국 발표 미확인 (Q3'26 목표 종료)",YL],["🟡 Terafab 건설 진척","Intel 파트너십",YL],["🟡 FSD 구독자 증가율","CEO 보상 마일스톤",YL],["🟢 에너지 사업 성장","안정 +27%",GR],["🟢 FSD ARR $546M","고마진 반복매출",GR]].map(([l,v,c],i) => (
+            {[["🔴 스웨덴·NHTSA FSD 안전성 조사","유럽 확장 지연 최대 변수",R],["🔴 FSD 안전성 美상원·EU 조사","로보택시 확장 지연 변수",R],["🔴 CapEx $20B 집행 속도","FCF 음전환 타이밍",R],["🔴 Cybercab 양산 전환","핵심 밸류에이션 변수",R],["🔴 Optimus 2026 생산량","머스크 '예측 불가'",R],["🔴 NHTSA EA26002 FSD 공학분석","대상 약 320만 대 · 사고 9건(사망 1)",R],["🔴 NHTSA AQ26002 사이버캡 인증 감사","9/3 개시 · 특별명령 21항목",R],["🟡 NHTSA 로보택시 사고 보고","65건 접수·최근 90일 15건·ADS 작동 100% (Robotaxi Tracker 집계, 9월 접수분까지)",YL],["🟡 NHTSA DP26010 로보택시 과속 청원","약 1,000대 추정 · 10/9 개시",YL],["🟡 캘리포니아 인종차별 재판(Fremont)","9/21~10/30 진행",YL],["🟢 SEC 트위터 공시 소송","$1.5M 합의 승인(7/8)",GR],["🟢 Autopilot 사망 소송","합의 후 기각(9/2)",GR],["🟡 FSD 중국 전면 승인","당국 발표 미확인 (Q3'26 목표 종료)",YL],["🟡 Terafab 건설 진척","Intel 파트너십",YL],["🟡 FSD 구독자 증가율","CEO 보상 마일스톤",YL],["🟢 에너지 사업 성장","안정 +27%",GR],["🟢 FSD ARR $546M","고마진 반복매출",GR]].map(([l,v,c],i) => (
               <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,.05)",fontSize:11}}>
                 <span style={{color:MU}}>{l}</span><span style={{fontFamily:"'Pretendard',sans-serif",color:c,fontSize:12}}>{v}</span>
               </div>
