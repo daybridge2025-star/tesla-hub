@@ -335,6 +335,110 @@ async function collectRobotaxiData(env) {
   console.log(`Robotaxi 수집 완료: ${today} — R:${riderVehicles} U:${unsupervised} I:${inactive} C:${cybercabs} 7D:${unsupRate7D}% DMV:${txDmvRegistered}`);
 }
 
+// ════════════════════════════════════════════════════════
+// ④-b TxDMV 등록 대수 자동 수집 (v3.6)
+//    robotaxitracker.com이 메인 페이지에 봇 확인을 도입해 HTML 스크래핑은 중단.
+//    운영자 허가 범위: 공개 API /v1/api/texas-dmv 하루 1회. 다른 경로·HTML 대체 수집 금지.
+//    (Codex 교차검증 반영: 오류 키 분리, 원본 생성시각 검증, 리다이렉트 미추적, 접근 차단 시 자동 중지)
+// ════════════════════════════════════════════════════════
+const TXDMV_API_URL = "https://robotaxitracker.com/v1/api/texas-dmv";
+const TXDMV_KEYS = {
+  data:      "robotaxi:txdmv",
+  err:       "robotaxi:txdmv:lastError",
+  blocked:   "robotaxi:txdmv:blocked",   // 401/403/410 → 허가·접근 정책 변경으로 보고 자동 수집 중지 (KV 키 삭제 시 재개)
+  candidate: "robotaxi:txdmv:candidate", // 급변값 격리 (다음 수집에서 재확인되면 수용)
+};
+const isCount = (v) => Number.isSafeInteger(v) && v >= 0;
+
+async function collectTxDmv(env) {
+  if (env.TXDMV_COLLECTION_ENABLED === "false") return { skipped: "disabled" };
+  const blocked = await env.VISITORS_KV.get(TXDMV_KEYS.blocked, "json");
+  if (blocked) return { skipped: "blocked", blocked };
+
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 15000);
+  let res;
+  try {
+    res = await fetch(TXDMV_API_URL, {
+      method: "GET",
+      redirect: "manual", // 로그인·챌린지·새 경로로의 리다이렉트를 자동 추적하지 않음
+      signal: ctl.signal,
+      headers: { "User-Agent": ROBOTAXI_UA, "Accept": "application/json" },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if ([401, 403, 410].includes(res.status)) {
+    await env.VISITORS_KV.put(TXDMV_KEYS.blocked, JSON.stringify({ time: new Date().toISOString(), status: res.status }));
+    throw new Error("TxDMV API HTTP " + res.status + ": 접근 정책 변경 가능성 — 자동 수집 중지, 운영자 확인 필요");
+  }
+  if (res.status === 429) throw new Error("TxDMV API 429 (Retry-After " + (res.headers.get("Retry-After") || "-") + ") — 다음 Cron까지 대기");
+  if (res.status !== 200) throw new Error("TxDMV API HTTP " + res.status);
+  if (!(res.headers.get("content-type") || "").includes("application/json")) {
+    throw new Error("TxDMV API: JSON 응답이 아님 (접근 정책 변경 가능성)");
+  }
+  const text = await res.text();
+  if (text.length > 2000000) throw new Error("TxDMV API: 응답이 너무 큼 (" + text.length + " bytes)");
+  const j = JSON.parse(text);
+
+  const reg = j && j.registrations;
+  const t = reg && reg.providers && reg.providers.tesla;
+  if (!t || typeof t.model_breakdown !== "object" || t.model_breakdown === null) throw new Error("TxDMV API: 응답 구조 변경 (registrations.providers.tesla)");
+  const fleet = t.fleet_count;
+  if (!isCount(fleet) || fleet < 1 || fleet > 1000000) throw new Error("TxDMV API: fleet_count 이상값 " + fleet);
+  for (const [k, v] of Object.entries(t.model_breakdown)) {
+    if (!isCount(v) || v > fleet) throw new Error("TxDMV API: model_breakdown 이상값 " + k + "=" + v);
+  }
+  const genMs = Date.parse(reg.generated_at);
+  if (!Number.isFinite(genMs)) throw new Error("TxDMV API: generated_at 누락·파싱 불가");
+
+  const prev = await env.VISITORS_KV.get(TXDMV_KEYS.data, "json");
+  if (prev && Date.parse(prev.sourceGeneratedAt) >= genMs) return { skipped: "not-newer" }; // 오래된 원본으로 덮어쓰지 않음
+
+  const warnings = [];
+  const mbSum = Object.values(t.model_breakdown).reduce((a, b) => a + b, 0);
+  if (mbSum !== fleet) warnings.push("model_breakdown 합계(" + mbSum + ") ≠ fleet_count(" + fleet + ")");
+  const pts = j.fleet_history && j.fleet_history.points;
+  const lastPt = Array.isArray(pts) && pts.length ? pts[pts.length - 1] : null;
+  const lastTesla = lastPt && lastPt.providers ? lastPt.providers.tesla : null;
+  if (lastTesla != null && lastTesla !== fleet) warnings.push("fleet_history 최신값(" + lastTesla + ") ≠ fleet_count(" + fleet + ")");
+
+  // 급변 감지: 경고(≥max(200,20%)) / 격리(≥1000대 또는 ≥75% — 다음 수집에서 재확인되면 수용)
+  if (prev && isCount(prev.fleetCount) && prev.fleetCount > 0) {
+    const diff = Math.abs(fleet - prev.fleetCount);
+    if (diff >= 1000 || diff / prev.fleetCount >= 0.75) {
+      const cand = await env.VISITORS_KV.get(TXDMV_KEYS.candidate, "json");
+      const confirmed = cand && Math.abs(fleet - cand.fleetCount) <= Math.max(50, cand.fleetCount * 0.05);
+      if (!confirmed) {
+        await env.VISITORS_KV.put(TXDMV_KEYS.candidate, JSON.stringify({ fleetCount: fleet, sourceGeneratedAt: reg.generated_at, seenAt: new Date().toISOString() }), { expirationTtl: 604800 });
+        return { skipped: "candidate", fleetCount: fleet };
+      }
+      warnings.push("급변값 재확인 후 수용 (이전 " + prev.fleetCount + " → " + fleet + ")");
+    } else if (diff > Math.max(200, prev.fleetCount * 0.2)) {
+      warnings.push("급변 경고 (이전 " + prev.fleetCount + " → " + fleet + ")");
+    }
+  }
+  await env.VISITORS_KV.delete(TXDMV_KEYS.candidate).catch(() => {});
+
+  const record = {
+    date:               reg.generated_at.slice(0, 10),
+    sourceGeneratedAt:  reg.generated_at,
+    collectedAt:        new Date().toISOString(),
+    fleetCount:         fleet,
+    cybercab:           isCount(t.model_breakdown["Tesla Cybercab"]) ? t.model_breakdown["Tesla Cybercab"] : null,
+    modelY:             isCount(t.model_breakdown["Tesla Model Y"]) ? t.model_breakdown["Tesla Model Y"] : null,
+    matchedActive:      isCount(t.matched_active_count) && t.matched_active_count <= fleet ? t.matched_active_count : null,
+    warnings,
+    source:             "Robotaxi Tracker /v1/api/texas-dmv (TxDMV 원자료 집계)",
+    sourceCredit:       "Ethan McKanna (@ethanmckanna) · https://robotaxitracker.com",
+  };
+  await env.VISITORS_KV.put(TXDMV_KEYS.data, JSON.stringify(record));
+  await env.VISITORS_KV.delete(TXDMV_KEYS.err).catch(() => {});
+  console.log("TxDMV 수집 완료:", record.date, "fleet", fleet, "Cybercab", record.cybercab, "ModelY", record.modelY);
+  return { ok: true, record };
+}
+
 async function handleRobotaxi(request, env) {
   const days = 90;
 
@@ -351,6 +455,9 @@ async function handleRobotaxi(request, env) {
   history.sort((a, b) => a.date.localeCompare(b.date));
 
   const lastError = await env.VISITORS_KV.get("robotaxi:lastError", "json");
+  const txDmv      = (await env.VISITORS_KV.get(TXDMV_KEYS.data, "json")) || null;
+  const txDmvErr   = await env.VISITORS_KV.get(TXDMV_KEYS.err, "json");
+  const txDmvBlock = await env.VISITORS_KV.get(TXDMV_KEYS.blocked, "json");
 
   return new Response(
     JSON.stringify({
@@ -361,6 +468,10 @@ async function handleRobotaxi(request, env) {
       servedAt:   new Date().toISOString(),
       stale:      latest && latest.collectedAt ? (Date.now() - new Date(latest.collectedAt).getTime()) > 36 * 3600 * 1000 : true,
       ...(lastError && { lastError }),
+      txDmv,
+      txDmvStale: txDmv && txDmv.collectedAt ? (Date.now() - new Date(txDmv.collectedAt).getTime()) > 36 * 3600 * 1000 : true,
+      ...(txDmvErr && (!txDmv || txDmvErr.time > txDmv.collectedAt) && { txDmvLastError: txDmvErr }),
+      ...(txDmvBlock && { txDmvBlocked: txDmvBlock }),
     }),
     {
       headers: {
@@ -544,10 +655,10 @@ export default {
     } else if (event.cron === "0 23 * * *") {
       // KST 08:00 — 로보택시 데이터 수집
       ctx.waitUntil(
-        collectRobotaxiData(env).catch(async (e) => {
-          console.error("로보택시 수집 실패:", e.message, e.stack);
+        collectTxDmv(env).catch(async (e) => {
+          console.error("TxDMV 수집 실패:", e.message, e.stack);
           await env.VISITORS_KV.put(
-            "robotaxi:lastError",
+            TXDMV_KEYS.err,
             JSON.stringify({
               time:    new Date().toISOString(),
               cron:    event.cron,
@@ -598,9 +709,9 @@ export default {
       const tok = (request.headers.get("Authorization") || "").replace(/^Bearer /, "");
       if (!env.TRIGGER_TOKEN || tok !== env.TRIGGER_TOKEN) return json({ error: "unauthorized" }, 401);
       try {
-        await collectRobotaxiData(env);
-        const latest = await env.VISITORS_KV.get("robotaxi:latest", "json");
-        return json({ status: "success", latest });
+        // v3.6: 강제 수집 제거 — 외부 API 호출은 Cron 하루 1회만. 저장된 값만 반환
+        const txDmv = await env.VISITORS_KV.get(TXDMV_KEYS.data, "json");
+        return json({ status: "success", txDmv });
       } catch (e) {
         await env.VISITORS_KV.put(
           "robotaxi:lastError",

@@ -967,6 +967,7 @@ export default function App() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setRoboLatest(data.latest || null);
+        setRoboTx(data.txDmv && !data.txDmvStale ? data.txDmv : null);
         setRoboHistory(data.history || []);
         setRoboMeta({ updatedAt: data.updatedAt || null, count: data.count ?? 0, error: null, lastError: data.lastError || null });
       } catch(e) {
@@ -1031,6 +1032,7 @@ export default function App() {
 
   /* ── 🆕 로보택시 state (v3.2) ── */
   const [roboLatest,  setRoboLatest]  = useState(null);
+  const [roboTx,      setRoboTx]      = useState(null); // Worker v3.6 TxDMV 등록 대수(자동 수집, 36시간 이내 값만)
   const [roboHistory, setRoboHistory] = useState([]);
   const [roboLoading, setRoboLoading] = useState(true);
   const [roboMeta,    setRoboMeta]    = useState({ updatedAt: null, count: 0, error: null, lastError: null });
@@ -1409,12 +1411,16 @@ export default function App() {
           {(!roboLatest || roboLatest.date < ROBO_MANUAL.date) && (
             <div style={{marginBottom:12,padding:"12px 14px",background:"rgba(56,189,248,.08)",border:"1px solid var(--border)",borderRadius:10,fontFamily:"'Pretendard',sans-serif"}}>
               <div style={{fontSize:11,color:"var(--text-3)",marginBottom:8}}>
-                수동 입력 · 기준일 {ROBO_MANUAL.date} · robotaxitracker.com (자동 수집 중단: 사이트가 봇 확인 도입)
+                수동 입력 · 기준일 {ROBO_MANUAL.date} · robotaxitracker.com (사이트가 봇 확인을 도입해 화면 지표 자동 수집 중단 · 텍사스 등록 대수만 공식 API로 자동 수집)
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(120px, 1fr))",gap:10}}>
                 <KPI label="무감독 운행" value={ROBO_MANUAL.inService} sub={`30일 +${ROBO_MANUAL.added30d}`} color={GR} />
                 <KPI label="Cybercab" value={ROBO_MANUAL.cybercabs} sub={`플릿의 ${ROBO_MANUAL.cybercabShare}`} color={"#a78bfa"} />
-                <KPI label="텍사스 등록" value={`${ROBO_MANUAL.txRegistered.toLocaleString()}대`} sub={`30일 +${ROBO_MANUAL.txAdded30d} · Cybercab ${ROBO_MANUAL.txCybercab} / Model Y ${ROBO_MANUAL.txModelY}`} color={"#f59e0b"} />
+                {roboTx ? (
+                  <KPI label="텍사스 등록(자동)" value={`${roboTx.fleetCount.toLocaleString()}대`} sub={`${roboTx.date} · Cybercab ${roboTx.cybercab ?? "—"} / Model Y ${roboTx.modelY ?? "—"}`} color={"#f59e0b"} />
+                ) : (
+                  <KPI label="텍사스 등록" value={`${ROBO_MANUAL.txRegistered.toLocaleString()}대`} sub={`30일 +${ROBO_MANUAL.txAdded30d} · Cybercab ${ROBO_MANUAL.txCybercab} / Model Y ${ROBO_MANUAL.txModelY}`} color={"#f59e0b"} />
+                )}
                 <KPI label="무감독 누적 마일" value={ROBO_MANUAL.miles} sub={`${ROBO_MANUAL.milesAsOf} 기준 · 주간 +${ROBO_MANUAL.weeklyMiles} (테슬라 집계)`} color={GR} />
                 <KPI label="누적 운행 기록" value={ROBO_MANUAL.trips.toLocaleString()} sub="trips logged" color={AC} />
               </div>
@@ -1458,8 +1464,8 @@ export default function App() {
                 />
                 <KPI
                   label="TxDMV 등록"
-                  value={roboLatest.txDmvRegistered != null ? `${roboLatest.txDmvRegistered}대` : "—"}
-                  sub="텍사스 차량국 공식"
+                  value={roboTx ? `${roboTx.fleetCount.toLocaleString()}대` : "—"}
+                  sub={roboTx ? `텍사스 주 전체 · ${roboTx.date} · TxDMV 원자료(Robotaxi Tracker 집계)` : "자동 수집 대기"}
                   color={"#f59e0b"}
                 />
               </div>
